@@ -6,22 +6,19 @@ import com.gregtechceu.gtceu.api.data.RotationState;
 import com.gregtechceu.gtceu.api.data.chemical.ChemicalHelper;
 import com.gregtechceu.gtceu.api.data.tag.TagPrefix;
 import com.gregtechceu.gtceu.api.machine.MachineDefinition;
-import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition;
 import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility;
 import com.gregtechceu.gtceu.api.pattern.FactoryBlockPattern;
 import com.gregtechceu.gtceu.api.pattern.Predicates;
 import com.gregtechceu.gtceu.client.renderer.machine.DynamicRenderHelper;
 import com.gregtechceu.gtceu.common.block.BoilerFireboxType;
-import com.gregtechceu.gtceu.common.data.GTBlocks;
-import com.gregtechceu.gtceu.common.data.GTMachines;
 import com.gregtechceu.gtceu.common.data.GTMaterials;
 import com.gregtechceu.gtceu.common.data.GTRecipeTypes;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
-import com.gregtechceu.gtceu.common.machine.multiblock.steam.SteamParallelMultiblockMachine;
+import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
 import com.liangqu.gtuf.common.machine.multiblock.electric.TierElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.AdjustableSteamParallelMachine;
-import net.minecraft.network.chat.Component;
+import com.liangqu.gtuf.common.machine.multiblock.steam.EnhanceableSteamMachine;
 
 import static com.gregtechceu.gtceu.api.machine.multiblock.PartAbility.*;
 import static com.gregtechceu.gtceu.api.pattern.Predicates.*;
@@ -103,6 +100,37 @@ public class GTUF_Machine_Test {
                     .build())
             .model(GTMachineModels.createWorkableCasingMachineModel(
                     GTCEu.id("block/casings/gcym/industrial_steam_casing"),
+                    GTCEu.id("block/multiblock/large_chemical_reactor")))
+            .register();
+
+    /**
+     * 可增强蒸汽多方块测试机：验证外壳等级（并行）与框架等级（加速）机制。
+     * 外壳 = 蒸汽机械方块(Tier1) / 脱氧钢机械方块(Tier2)；框架 = 青铜框架(Tier1) / 钢框架(Tier2)。
+     */
+    public static final MachineDefinition ENHANCEABLE_STEAM_MIXER = REGISTRATE
+            .multiblock("enhanceable_steam_mixer", holder -> new EnhanceableSteamMachine(holder,
+                    GTRecipeTypes.MIXER_RECIPES, 2))
+            .rotationState(RotationState.NON_Y_AXIS)
+            .appearanceBlock(BRONZE_HULL)
+            .recipeType(GTRecipeTypes.MIXER_RECIPES)
+            .addOutputLimit(ItemRecipeCapability.CAP, 1)
+            .pattern(definition -> FactoryBlockPattern.start()
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAA###", "AKA###", "AAA###")
+                    .where("#", Predicates.any())
+                    .where("K", Predicates.controller(blocks(definition.getBlock())))
+                    .where("C", GTUF_PatternPredicates.frameTier())
+                    .where("A", GTUF_PatternPredicates.steamCasingTier().setMinGlobalLimited(40)
+                            .or(Predicates.abilities(PartAbility.STEAM_IMPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(PartAbility.STEAM_EXPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(PartAbility.STEAM).setExactLimit(1))
+                            .or(Predicates.abilities(PartAbility.EXPORT_FLUIDS))
+                            .or(Predicates.abilities(PartAbility.IMPORT_FLUIDS)))
+                    .build())
+            .model(GTMachineModels.createWorkableCasingMachineModel(
+                    GTCEu.id("block/casings/solid/machine_casing_bronze_plated_bricks"),
                     GTCEu.id("block/multiblock/large_chemical_reactor")))
             .register();
 

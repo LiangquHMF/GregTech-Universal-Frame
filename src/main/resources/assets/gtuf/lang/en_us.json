@@ -1,5 +1,9 @@
 {
   "gtuf.multiblock.parallel_amount": "Parallel Amount: %s",
+  "gtuf.multiblock.casing_tier": "Casing Tier: %s",
+  "gtuf.multiblock.frame_tier": "Frame Tier: %s",
+  "gtuf.multiblock.pattern.error.casing": "All casing blocks must be the same tier",
+  "gtuf.multiblock.pattern.error.frame": "All frame blocks must be the same tier",
   "gtuf.gui.decrease": "[-]",
   "gtuf.gui.increase": "[+]",
   "gtuf.gui.parallel": "Parallel:"
