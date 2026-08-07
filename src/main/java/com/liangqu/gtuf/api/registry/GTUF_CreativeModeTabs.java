@@ -9,7 +9,7 @@ import static com.gregtechceu.gtceu.common.registry.GTRegistration.REGISTRATE;
 
 public class GTUF_CreativeModeTabs {
 
-    public static final RegistryEntry<CreativeModeTab> HM_CORE_ITEM = GTUF_Registries.REGISTRATE
+    public static final RegistryEntry<CreativeModeTab> GTUF_TEST = GTUF_Registries.REGISTRATE
             .defaultCreativeTab("item", builder -> builder
                     .displayItems(
                             new GTCreativeModeTabs.RegistrateDisplayItemsGenerator("item", GTUF_Registries.REGISTRATE))

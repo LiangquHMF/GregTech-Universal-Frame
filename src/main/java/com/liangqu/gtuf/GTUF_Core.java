@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(GTUF_Core.MOD_ID)
 public class GTUF_Core {
-    public static final String MOD_ID = "gtfe";
+    public static final String MOD_ID = "gtuf";
     public static final String MOD_NAME = "GregTechForestryExtension";
     public static final Logger LOGGER = LogUtils.getLogger();
 

@@ -9,6 +9,7 @@ import com.gregtechceu.gtceu.api.machine.MachineDefinition;
 import com.gregtechceu.gtceu.api.recipe.GTRecipeType;
 import com.liangqu.gtuf.GTUF_Core;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
+import com.liangqu.gtuf.common.data.GTUF_Machines;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -36,7 +37,7 @@ public class CommonProxy {
     }
 
     public void registerMachines(GTCEuAPI.RegisterEvent<ResourceLocation, MachineDefinition> event) {
-
+        GTUF_Machines.init();
     }
 
     private void registerRecipeTypes(GTCEuAPI.RegisterEvent<ResourceLocation, GTRecipeType> event) {
