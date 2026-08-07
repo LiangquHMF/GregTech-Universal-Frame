@@ -1,0 +1,218 @@
+plugins {
+    id 'idea'
+    id "maven-publish"
+    id 'net.minecraftforge.gradle' version '[6.0.16,6.2)'
+    id 'org.parchmentmc.librarian.forgegradle' version '1.+'
+    id 'com.diffplug.spotless' version '7.0.2'
+    id 'org.spongepowered.mixin' version '0.7.+'
+
+}
+def generatedResources = file("src/generated")
+
+
+sourceSets {
+    main.resources {
+        srcDir generatedResources
+    }
+}
+
+repositories {
+    maven {
+        name = 'GTCEu Maven'
+        url = 'https://maven.gtceu.com'
+        content {
+            includeGroup 'com.gregtechceu.gtceu'
+        }
+    }
+    maven {
+        name 'FirstDarkDev'
+        url "https://maven.firstdarkdev.xyz/snapshots/"
+    }
+
+    maven {
+        // latvian.dev Maven (KubeJS and Rhino)
+        url "https://maven.latvian.dev/releases"
+        content {
+            includeGroup "dev.latvian.mods"
+            includeGroup "dev.latvian.apps"
+        }
+    }
+    maven { // Registrate
+        url = "https://maven.tterrag.com/"
+        content {
+            // need to be specific here due to version overlaps
+            includeGroup("com.tterrag.registrate")
+        }
+    }
+    maven {
+        url 'https://jitpack.io'
+        content {
+            includeGroup "com.github.rtyley"
+        }
+    }
+    maven {
+        // location of the maven that hosts JEI files before January 2023
+        name = "Progwml6's maven"
+        url = "https://dvs1.progwml6.com/files/maven/"
+    }
+    maven {
+        // location of the maven that hosts JEI files since January 2023
+        name = "Jared's maven"
+        url = "https://maven.blamejared.com/"
+    }
+
+    maven {
+        url = "https://maven.architectury.dev"
+    }
+
+    maven {
+        // Curse Forge File
+        url "https://cursemaven.com/"
+        content {
+            includeGroup "curse.maven"
+        }
+    }
+    maven {
+        // location of a maven mirror for JEI files, as a fallback
+        name = "ModMaven"
+        url = "https://modmaven.dev"
+        content {
+            includeGroup 'appeng'
+        }
+    }
+    maven { url = "https://maven.parchmentmc.org" }
+}
+group = mod_group_id
+version = mod_version
+base {archivesName = mod_id}
+java { sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17 }
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+minecraft {
+    mappings channel: mapping_channel,
+            version: mapping_version
+    copyIdeResources = true
+
+    runs {
+
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${buildDir}/createSrgToMcp/output.srg"
+        }
+        //mods {"${mod_id}" {source sourceSets.main}}}
+
+        client { property 'forge.enabledGameTestNamespaces', mod_id }
+        server { property 'forge.enabledGameTestNamespaces', mod_id; args '--nogui' }
+        data {
+            workingDirectory project.file('run-data')
+            // 数据生成必需参数
+            args '--mod', mod_id
+            args '--all'
+            args '--output', file('src/generated/resources/').getAbsolutePath()
+            args '--existing', file('src/main/resources/').getAbsolutePath()
+            args '--existing-mod', 'gtceu'
+            // 必须绑定源码集，否则生成器找不到你的模元数据
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main   // 注意是 source，不是 sourceSet
+                }
+            }
+        }
+    }
+}
+apply from: "$rootDir/gradle/scripts/spotless.gradle"
+
+
+//mixin {
+// MixinGradle Settings
+//add sourceSets.main, 'mixins.gtse.refmap.json'
+//config 'gtse.mixins.json'
+
+//debug.verbose = true
+//debug.export = true
+// }
+
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    //GTM
+    implementation fg.deobf("com.gregtechceu.gtceu:gtceu-${minecraft_version}:${gtm_version}:slim") { transitive = false
+        exclude group: 'com.tterrag.registrate'}
+    implementation fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}"){transitive = false}
+    implementation fg.deobf("dev.latvian.mods:kubejs-forge:${kubejs_version}")
+    implementation fg.deobf("dev.latvian.mods:rhino-forge:${rhino_version}")
+    runtimeOnly(fg.deobf("dev.architectury:architectury-forge:${architectury_version}"))
+    implementation fg.deobf("com.lowdragmc.ldlib:ldlib-forge-${minecraft_version}:${ldlib_version}") { transitive = false }
+    implementation fg.deobf("dev.toma.configuration:configuration-forge-${minecraft_version}:${configuration_version}")
+
+    //JEI
+    compileOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"))
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
+    runtimeOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}"))
+
+
+
+
+
+
+
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+
+    // lombok
+    compileOnly 'org.projectlombok:lombok:1.18.24'
+    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+
+    implementation 'org.spongepowered:mixin:0.8.5'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+    testAnnotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+
+}
+
+
+
+
+// This block of code expands all declared replace properties in the specified resource targets.
+// A missing property will result in an error. Properties are expanded using ${} Groovy notation.
+// When "copyIdeResources" is enabled, this will also run before the game launches in IDE environments.
+// See https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
+tasks.named('processResources', ProcessResources).configure {
+    var properties = [
+            "mod_license"      : mod_license,
+            "mod_id"           : mod_id,
+            "version"          : version,
+            "mod_name"         : mod_name,
+            "mod_url"          : mod_url,
+            "mod_author"       : mod_author,
+            "forge_version"    : forge_version.split("\\.")[0], // only specify major version of forge
+            "minecraft_version": minecraft_version,
+            "gtceu_version"    : gtceu_version,
+    ]
+
+    inputs.properties(properties)
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand properties + [project: project]
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes(["Specification-Title"     : mod_id,
+                    "Specification-Vendor"    : mod_author,
+                    "Specification-Version"   : "1", // We are version 1 of ourselves
+                    "Implementation-Title"    : project.name,
+                    "Implementation-Version"  : project.jar.archiveVersion,
+                    "Implementation-Vendor"   : mod_author,
+                    "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")])
+    }
+    finalizedBy 'reobfJar'}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
+    options.release.set(17)
+}
