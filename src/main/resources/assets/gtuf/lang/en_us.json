@@ -1,5 +1,5 @@
 {
-  "gtuf.multiblock.parallel_amount": "Parallel Amount",
+  "gtuf.multiblock.parallel_amount": "Parallel Amount: %s",
   "gtuf.gui.decrease": "[-]",
   "gtuf.gui.increase": "[+]",
   "gtuf.gui.parallel": "Parallel:"

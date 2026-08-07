@@ -19,11 +19,13 @@ import com.gregtechceu.gtceu.common.data.GTRecipeTypes;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 import com.gregtechceu.gtceu.common.machine.multiblock.steam.SteamParallelMultiblockMachine;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
+import com.liangqu.gtuf.common.machine.multiblock.electric.TierElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.AdjustableSteamParallelMachine;
 import net.minecraft.network.chat.Component;
 
 import static com.gregtechceu.gtceu.api.machine.multiblock.PartAbility.*;
 import static com.gregtechceu.gtceu.api.pattern.Predicates.*;
+import static com.gregtechceu.gtceu.common.data.GCYMBlocks.CASING_INDUSTRIAL_STEAM;
 import static com.gregtechceu.gtceu.common.data.GTBlocks.*;
 import static com.gregtechceu.gtceu.common.data.GTBlocks.CASING_BRONZE_BRICKS;
 import static com.gregtechceu.gtceu.common.data.GTBlocks.CASING_BRONZE_PIPE;
@@ -78,6 +80,31 @@ public class GTUF_Machine_Test {
 
 
 
+    public static final MachineDefinition TEST_MACHINE = REGISTRATE
+            .multiblock("test_machine", TierElectricParallelMachine::new)
+            .rotationState(RotationState.ALL)
+            .appearanceBlock(CASING_INDUSTRIAL_STEAM)
+            .recipeType(GTRecipeTypes.FORGE_HAMMER_RECIPES)
+            .recipeModifier(TierElectricParallelMachine::recipeModifier, true)
+            .addOutputLimit(ItemRecipeCapability.CAP, 1)
+            .pattern(definition -> FactoryBlockPattern.start()
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ADDDDA", "AAAAAA")
+                    .aisle("AAAAAA", "ACACCA", "AAAAAA")
+                    .aisle("AAA###", "AKA###", "AAA###")
+                    .where("#", Predicates.any())
+                    .where("K", Predicates.controller(blocks(definition.getBlock())))
+                    .where("D", blocks(CASING_BRONZE_GEARBOX.get()))
+                    .where("C", Predicates.blocks(ChemicalHelper.getBlock(TagPrefix.frameGt, GTMaterials.Bronze)))
+                    .where("A", blocks(CASING_INDUSTRIAL_STEAM.get()).setMinGlobalLimited(45)
+                            .or(Predicates.abilities(IMPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(EXPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(INPUT_ENERGY).setExactLimit(1)))
+                    .build())
+            .model(GTMachineModels.createWorkableCasingMachineModel(
+                    GTCEu.id("block/casings/gcym/industrial_steam_casing"),
+                    GTCEu.id("block/multiblock/large_chemical_reactor")))
+            .register();
 
     public static void init() {}
 }

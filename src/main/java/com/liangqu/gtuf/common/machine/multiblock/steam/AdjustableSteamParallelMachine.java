@@ -11,6 +11,7 @@ import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
 import com.lowdragmc.lowdraglib.gui.util.ClickData;
 import com.lowdragmc.lowdraglib.gui.widget.ComponentPanelWidget;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
+import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import javax.annotation.Nonnull;
@@ -18,6 +19,9 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 public class AdjustableSteamParallelMachine extends SteamMultiBlockBase implements ParallelMachine{
+
+    protected static final ManagedFieldHolder MANAGED_FIELD_HOLDER = new ManagedFieldHolder(
+            AdjustableSteamParallelMachine.class, SteamMultiBlockBase.MANAGED_FIELD_HOLDER);
 
     private static final int MIN_PARALLEL = 1;
 
@@ -31,6 +35,11 @@ public class AdjustableSteamParallelMachine extends SteamMultiBlockBase implemen
 
     public record Config(GTRecipeType recipeType, int defaultParallel, int maxParallel,
                          double durationMultiplier, boolean adjustable) {}
+
+    @Override
+    public ManagedFieldHolder getFieldHolder() {
+        return MANAGED_FIELD_HOLDER;
+    }
 
     public AdjustableSteamParallelMachine(IMachineBlockEntity holder, GTRecipeType recipeType, int defaultParallel,
                                           int maxParallel, double durationMultiplier, boolean adjustable,
@@ -85,6 +94,7 @@ public class AdjustableSteamParallelMachine extends SteamMultiBlockBase implemen
         this.targetParallel = "parallelSub".equals(componentData)
                 ? adjust(targetParallel, false)
                 : adjust(targetParallel, true);
+
     }
 
     private int adjust(int current, boolean increase) {
