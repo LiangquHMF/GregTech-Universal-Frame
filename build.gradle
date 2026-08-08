@@ -85,7 +85,14 @@ repositories {
 group = mod_group_id
 version = mod_version
 base {archivesName = mod_id}
-java { sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17 }
+// Lombok 1.18.24 不支持 JDK 21（JCTree$JCImport.qualid 在 JDK 21 已移除）。
+// 用 toolchain 锁定编译 JVM 为 JDK 17，避免 IDE 以捆绑 JDK 21 启动 Gradle 时编译崩溃。
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17
+}
 sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 minecraft {

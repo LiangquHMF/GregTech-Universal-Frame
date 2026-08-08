@@ -8,5 +8,7 @@
   "gtuf.multiblock.pattern.error.universal_frame": "All universal frame blocks must be the same tier",
   "gtuf.gui.decrease": "[-]",
   "gtuf.gui.increase": "[+]",
-  "gtuf.gui.parallel": "Parallel:"
+  "gtuf.gui.parallel": "Parallel:",
+  "gtuf.machine.enhanced_parallel_hatch.tooltip": "Allows to run up to %s recipes in parallel.",
+  "gtuf.machine.enhanced_fluid_hatch.tooltip": "Capacity quadruples per tier and is not capped. Tooltip shows theoretical capacity; actual storage is clamped to 2,147,483,647 mB."
 }
