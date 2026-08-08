@@ -6,6 +6,7 @@ import com.gregtechceu.gtceu.api.capability.recipe.IO;
 import com.gregtechceu.gtceu.api.data.RotationState;
 import com.gregtechceu.gtceu.api.machine.MachineDefinition;
 import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility;
+import com.gregtechceu.gtceu.api.registry.registrate.MachineBuilder;
 import com.gregtechceu.gtceu.api.machine.property.GTMachineModelProperties;
 import com.gregtechceu.gtceu.api.machine.trait.RecipeLogic;
 import com.gregtechceu.gtceu.common.data.machines.GTMachineUtils;
@@ -17,6 +18,7 @@ import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedFluidHatchPartMac
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedParallelHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -82,13 +84,17 @@ public class GTUF_Machines {
         }
         PartAbility ability = io == IO.IN ? IMPORT_FLUIDS : EXPORT_FLUIDS;
         String ioOverlay = io == IO.OUT ? "overlay_pipe_out_emissive" : "overlay_pipe_in_emissive";
+        // 注意：GTUF 的 REGISTRATE modid 是 "gtuf"，String 重载会把 overlay 纹理拼成
+        // gtuf:block/overlay/machine/...（不存在）。这里必须显式用 GTCEu.id 指向 GTM 的纹理。
+        ResourceLocation overlayTex = GTCEu.id("block/overlay/machine/" + ioOverlay);
+        ResourceLocation emissiveTex = GTCEu.id("block/overlay/machine/" + GTMachineModels.OVERLAY_FLUID_HATCH_TEX);
         MachineDefinition[] defs = GTMachineUtils.registerTieredMachines(REGISTRATE, name,
                 (holder, tier) -> new EnhancedFluidHatchPartMachine(holder, tier, io,
                         EnhancedFluidHatchPartMachine.INITIAL_TANK_CAPACITY, 1),
                 (tier, builder) -> builder
                         .langValue(GTValues.VNF[tier] + " " + displayName)
                         .rotationState(RotationState.ALL)
-                        .colorOverlayTieredHullModel(ioOverlay, null, GTMachineModels.OVERLAY_FLUID_HATCH_TEX)
+                        .colorOverlayTieredHullModel(overlayTex, null, emissiveTex)
                         .abilities(ability)
                         .tooltips(Component.translatable("gtuf.machine.enhanced_fluid_hatch.tooltip"),
                                 Component.translatable("gtceu.universal.tooltip.fluid_storage_capacity",
@@ -156,11 +162,60 @@ public class GTUF_Machines {
                 .machine(name, holder -> new IndustrialSteamHatchPartMachine(holder, capacity))
                 .rotationState(RotationState.ALL)
                 .abilities(PartAbility.STEAM)
-                .overlaySteamHullModel("steam_hatch")
+                .overlaySteamHullModel(GTCEu.id("block/machine/part/steam_hatch"))
                 .tooltips(Component.translatable("gtceu.universal.tooltip.fluid_storage_capacity", capacity),
                         Component.translatable("gtceu.machine.steam.steam_hatch.tooltip"))
                 .allowCoverOnFront(true)
                 .register();
+    }
+
+    /**
+     * KJS 辅助：给分级机器挂"彩色挡板外壳 + 管道 overlay"模型，供 KubeJS 脚本在
+     * {@code GTCEuStartupEvents.registry('gtceu:machine', ...)} 的 'custom' 分级 builder 的
+     * {@code .definition((tier, builder) => ...)} 回调里调用。
+     *
+     * <p>为什么需要这个方法：{@code MachineBuilder.colorOverlayTieredHullModel} 的三参 String 重载
+     * 中间那个可选的 pipeOverlay 参数原生是 null（GTM 流体/物品仓都传 null），但 KubeJS 的 Rhino
+     * 引擎无法给该重载传 null——null 会同时匹配 {@code (String,String,String)} 与
+     * {@code (ResourceLocation,...)} 两个重载，抛 {@code EvaluatorException: ambiguous} 直接崩启动。
+     * 此方法在 Java 侧把 null 包装掉，JS 侧只需传 overlay 与 emissive 两个纹理名，无歧义。</p>
+     *
+     * <p>用法（脚本内）：{@code GTUF_Machines.colorOverlayHull(builder,
+     * 'overlay_pipe_in_emissive', 'overlay_fluid_hatch')}。overlay 是管道纹理（KJS builder 的
+     * REGISTRATE modid 是 gtceu，纹理名会在 gtceu:block/overlay/machine/ 下解析），emissive 是
+     * 发光层（如流体仓的 overlay_fluid_hatch）。</p>
+     *
+     * @param builder  原生 MachineBuilder（'custom' 分级 builder 的 definition 回调参数）
+     * @param overlay  主 overlay 纹理名，如 overlay_pipe_in_emissive / overlay_pipe_out_emissive
+     * @param emissive 发光 overlay 纹理名，如 overlay_fluid_hatch（可为 null，同 Java 语义）
+     * @return 原 builder，可继续链式调用
+     */
+    public static MachineBuilder<?> colorOverlayHull(MachineBuilder<?> builder, String overlay, String emissive) {
+        return builder.colorOverlayTieredHullModel(overlay, null, emissive);
+    }
+
+    /**
+     * KJS 辅助：给机器挂原生蒸汽仓外壳模型（steam_hatch），供 KubeJS 脚本在
+     * {@code GTCEuStartupEvents.registry('gtceu:machine', ...)} 的 'custom' 分级 builder 的
+     * {@code .definition((tier, builder) => ...)} 回调里调用。
+     *
+     * <p>为什么需要这个方法：{@code MachineBuilder.overlaySteamHullModel} 有 {@code (String)} 与
+     * {@code (ResourceLocation)} 两个重载。KubeJS 给 {@code ResourceLocation} 注册了 TypeWrapper
+     * （{@code CharSequence → RL}），把 JS 字符串到 String 的转换权重与到 RL 的权重拉平；而 Rhino
+     * 对 NativeJavaObject（{@code GTCEu.id(...)} 的返回值）到 String 的转换权重也拉到相同——实测
+     * <b>无论传 JS 字符串还是 {@code GTCEu.id(...)} 的 RL 对象都会抛 {@code EvaluatorException: ambiguous}</b>
+     * 崩启动。此方法在 Java 侧直接调 {@code (ResourceLocation)} 重载，避开 Rhino 重载解析。</p>
+     *
+     * <p>用法（脚本内）：{@code GTUF_Machines.overlaySteamHull(builder, 'steam_hatch')}。
+     * 底层等价于 {@code builder.overlaySteamHullModel(GTCEu.id("block/machine/part/steam_hatch"))}，
+     * 与 {@link #registerIndustrialSteamHatch} 的 proven 写法一致。</p>
+     *
+     * @param builder         原生 MachineBuilder（'custom' 分级 builder 的 definition 回调参数）
+     * @param overlayTexName  蒸汽外壳纹理名，如 steam_hatch（会拼成 block/machine/part/steam_hatch）
+     * @return 原 builder，可继续链式调用
+     */
+    public static MachineBuilder<?> overlaySteamHull(MachineBuilder<?> builder, String overlayTexName) {
+        return builder.overlaySteamHullModel(GTCEu.id("block/machine/part/" + overlayTexName));
     }
 
     /** 关联增强流体仓配对表：swapIO 反查 (tier, IO) → 对应方向的 MachineDefinition。 */
