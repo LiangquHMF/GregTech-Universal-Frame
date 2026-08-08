@@ -50,8 +50,8 @@ public class EnhanceableSteamMachine extends SteamMultiBlockBase implements Para
     public void onStructureFormed() {
         super.onStructureFormed();
         var ctx = getMultiblockState().getMatchContext();
-        if (ctx.get(GTUF_PatternPredicates.CASING_TIER_KEY) instanceof Integer tier) casingTier = tier;
-        if (ctx.get(GTUF_PatternPredicates.FRAME_TIER_KEY) instanceof Integer tier) frameTier = tier;
+        if (ctx.get(GTUF_PatternPredicates.STEAM_CASING_TIER_KEY) instanceof Integer tier) casingTier = tier;
+        if (ctx.get(GTUF_PatternPredicates.STEAM_FRAME_TIER_KEY) instanceof Integer tier) frameTier = tier;
     }
 
     @Override
@@ -102,13 +102,12 @@ public class EnhanceableSteamMachine extends SteamMultiBlockBase implements Para
     }
 
     /**
-     * 框架等级加速：实际时间 = 原始时间^(1-(框架等级-1)×0.01)。
-     * Tier1 指数为 1（无加速），Tier2 为 0.99（约 1% 加速）。
+     * 框架等级加速：实际时间 = 原始时间^(1-(框架等级-1)×0.1)。
      * 如需修改加速公式，直接覆盖此方法。
      */
     protected GTRecipe applyFrameSpeed(GTRecipe recipe) {
         if (frameTier > 1) {
-            double exponent = 1.0 - (frameTier - 1) * 0.01;
+            double exponent = 1.0 - (frameTier - 1) * 0.1;
             recipe.duration = Math.max(1, (int) Math.round(Math.pow(recipe.duration, exponent)));
         }
         return recipe;

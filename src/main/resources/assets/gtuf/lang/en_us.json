@@ -4,6 +4,8 @@
   "gtuf.multiblock.frame_tier": "Frame Tier: %s",
   "gtuf.multiblock.pattern.error.casing": "All casing blocks must be the same tier",
   "gtuf.multiblock.pattern.error.frame": "All frame blocks must be the same tier",
+  "gtuf.multiblock.pattern.error.universal_casing": "All universal casing blocks must be the same tier",
+  "gtuf.multiblock.pattern.error.universal_frame": "All universal frame blocks must be the same tier",
   "gtuf.gui.decrease": "[-]",
   "gtuf.gui.increase": "[+]",
   "gtuf.gui.parallel": "Parallel:"

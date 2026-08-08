@@ -16,6 +16,7 @@ import com.gregtechceu.gtceu.common.data.GTRecipeTypes;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
+import com.liangqu.gtuf.common.machine.multiblock.electric.ConfigurableElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.TierElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.AdjustableSteamParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.EnhanceableSteamMachine;
@@ -121,8 +122,8 @@ public class GTUF_Machine_Test {
                     .aisle("AAA###", "AKA###", "AAA###")
                     .where("#", Predicates.any())
                     .where("K", Predicates.controller(blocks(definition.getBlock())))
-                    .where("C", GTUF_PatternPredicates.frameTier())
-                    .where("A", GTUF_PatternPredicates.steamCasingTier().setMinGlobalLimited(40)
+                    .where("C", GTUF_PatternPredicates.SteamFrameTier())
+                    .where("A", GTUF_PatternPredicates.SteamCasingTier().setMinGlobalLimited(40)
                             .or(Predicates.abilities(PartAbility.STEAM_IMPORT_ITEMS).setPreviewCount(1))
                             .or(Predicates.abilities(PartAbility.STEAM_EXPORT_ITEMS).setPreviewCount(1))
                             .or(Predicates.abilities(PartAbility.STEAM).setExactLimit(1))
@@ -131,6 +132,37 @@ public class GTUF_Machine_Test {
                     .build())
             .model(GTMachineModels.createWorkableCasingMachineModel(
                     GTCEu.id("block/casings/solid/machine_casing_bronze_plated_bricks"),
+                    GTCEu.id("block/multiblock/large_chemical_reactor")))
+            .register();
+
+    /**
+     * 可配置并行数电力多方块测试机：注册时设置最大并行数为 32，
+     * GUI 中可用 [-] / [+] 调整当前并行数（1~32），默认满并行。
+     */
+    public static final MachineDefinition CONFIGURABLE_ELECTRIC_PARALLEL = REGISTRATE
+            .multiblock("configurable_electric_parallel",
+                    holder -> new ConfigurableElectricParallelMachine(holder, 32))
+            .rotationState(RotationState.ALL)
+            .appearanceBlock(CASING_INDUSTRIAL_STEAM)
+            .recipeType(GTRecipeTypes.FORGE_HAMMER_RECIPES)
+            .recipeModifier(ConfigurableElectricParallelMachine::recipeModifier, true)
+            .addOutputLimit(ItemRecipeCapability.CAP, 1)
+            .pattern(definition -> FactoryBlockPattern.start()
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ADDDDA", "AAAAAA")
+                    .aisle("AAAAAA", "ACACCA", "AAAAAA")
+                    .aisle("AAA###", "AKA###", "AAA###")
+                    .where("#", Predicates.any())
+                    .where("K", Predicates.controller(blocks(definition.getBlock())))
+                    .where("D", blocks(CASING_BRONZE_GEARBOX.get()))
+                    .where("C", Predicates.blocks(ChemicalHelper.getBlock(TagPrefix.frameGt, GTMaterials.Bronze)))
+                    .where("A", blocks(CASING_INDUSTRIAL_STEAM.get()).setMinGlobalLimited(45)
+                            .or(Predicates.abilities(IMPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(EXPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(INPUT_ENERGY).setExactLimit(1)))
+                    .build())
+            .model(GTMachineModels.createWorkableCasingMachineModel(
+                    GTCEu.id("block/casings/gcym/industrial_steam_casing"),
                     GTCEu.id("block/multiblock/large_chemical_reactor")))
             .register();
 
