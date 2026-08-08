@@ -139,14 +139,11 @@ minecraft {
 apply from: "$rootDir/gradle/scripts/spotless.gradle"
 
 
-//mixin {
-// MixinGradle Settings
-//add sourceSets.main, 'mixins.gtse.refmap.json'
-//config 'gtse.mixins.json'
-
-//debug.verbose = true
-//debug.export = true
-// }
+mixin {
+    // MixinGradle Settings：refmap 供 dev 运行时 remapRefMap + 发布 reobfJar 时反混淆
+    add sourceSets.main, 'mixins.gtuf.refmap.json'
+    config 'mixins.gtuf.json'
+}
 
 
 dependencies {
@@ -166,6 +163,11 @@ dependencies {
     compileOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}"))
     compileOnly fg.deobf("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
     runtimeOnly(fg.deobf("mezz.jei:jei-${minecraft_version}-forge:${jei_version}"))
+
+    //Jade（optional，供线程仓线程信息显示；compileOnly 让 @WailaPlugin/provider 可编译，
+    // runtimeOnly 让 dev 运行带 Jade 验证；正式 jar 不含 Jade、未装 Jade 时不加载本类）
+    compileOnly fg.deobf("curse.maven:jade-324717:5390389")
+    runtimeOnly fg.deobf("curse.maven:jade-324717:5390389")
 
 
 

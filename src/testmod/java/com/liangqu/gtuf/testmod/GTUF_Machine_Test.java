@@ -16,11 +16,13 @@ import com.gregtechceu.gtceu.common.data.GTMaterials;
 import com.gregtechceu.gtceu.common.data.GTRecipeModifiers;
 import com.gregtechceu.gtceu.common.data.GTRecipeTypes;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
+import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.common.data.models.GTUFModels;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
 import com.liangqu.gtuf.common.machine.multiblock.electric.ConfigurableElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.EnhanceableElectricMachine;
+import com.liangqu.gtuf.common.machine.multiblock.electric.MultiThreadElectricMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.TierElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.AdjustableSteamParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.EnhanceableSteamMachine;
@@ -265,6 +267,70 @@ public class GTUF_Machine_Test {
                     .build())
             .model(GTUFModels.createTieredMachineModel(
                     GTCEu.id("block/casings/solid/machine_casing_solid_steel"),
+                    GTCEu.id("block/multiblock/large_chemical_reactor")))
+            .register();
+
+    /**
+     * 多线程多方块测试机：挂 MIXER 与 FORGE_HAMMER 两类配方类型，结构能力位含 THREAD_HATCH。
+     * 放入线程仓并调大线程数后，机器可同时处理两类配方（不同配方 ID 各自独立进度，
+     * 见 GTUFThreadingLogic）。验证多配方并行 + 线程仓 GUI 可调线程数。
+     */
+    public static final MachineDefinition THREAD_TEST = REGISTRATE
+            .multiblock("thread_test", MultiThreadElectricMachine::new)
+            .rotationState(RotationState.ALL)
+            .appearanceBlock(CASING_INDUSTRIAL_STEAM)
+            .recipeType(GTRecipeTypes.MIXER_RECIPES)
+            .recipeType(GTRecipeTypes.FORGE_HAMMER_RECIPES)
+            .addOutputLimit(ItemRecipeCapability.CAP, 1)
+            .pattern(definition -> FactoryBlockPattern.start()
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ADDDDA", "AAAAAA")
+                    .aisle("AAAAAA", "ACACCA", "AAAAAA")
+                    .aisle("AAA###", "AKA###", "AAA###")
+                    .where("#", Predicates.any())
+                    .where("K", Predicates.controller(blocks(definition.getBlock())))
+                    .where("D", blocks(CASING_BRONZE_GEARBOX.get()))
+                    .where("C", Predicates.blocks(ChemicalHelper.getBlock(TagPrefix.frameGt, GTMaterials.Bronze)))
+                    .where("A", blocks(CASING_INDUSTRIAL_STEAM.get()).setMinGlobalLimited(45)
+                            .or(Predicates.abilities(IMPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(EXPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(INPUT_ENERGY).setExactLimit(1))
+                            .or(Predicates.abilities(GTUF_PartAbility.THREAD_HATCH).setExactLimit(1)))
+                    .build())
+            .model(GTMachineModels.createWorkableCasingMachineModel(
+                    GTCEu.id("block/casings/gcym/industrial_steam_casing"),
+                    GTCEu.id("block/multiblock/large_chemical_reactor")))
+            .register();
+
+    /**
+     * Mixin 推广验证机：普通电力多方块（用 GTM 原生 {@code WorkableElectricMultiblockMachine}，
+     * 不实现 IThreadModifierMachine、不覆盖 createRecipeLogic），结构能力位含 THREAD_HATCH。
+     * 验证 {@code GTUFRecipeLogicMixin} 对任意电力多方块生效——装线程仓后同样多线程并行。
+     */
+    public static final MachineDefinition MIXIN_THREAD_TEST = REGISTRATE
+            .multiblock("mixin_thread_test", WorkableElectricMultiblockMachine::new)
+            .rotationState(RotationState.ALL)
+            .appearanceBlock(CASING_INDUSTRIAL_STEAM)
+            .recipeType(GTRecipeTypes.MIXER_RECIPES)
+            .recipeType(GTRecipeTypes.FORGE_HAMMER_RECIPES)
+            .addOutputLimit(ItemRecipeCapability.CAP, 1)
+            .pattern(definition -> FactoryBlockPattern.start()
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ADDDDA", "AAAAAA")
+                    .aisle("AAAAAA", "ACACCA", "AAAAAA")
+                    .aisle("AAA###", "AKA###", "AAA###")
+                    .where("#", Predicates.any())
+                    .where("K", Predicates.controller(blocks(definition.getBlock())))
+                    .where("D", blocks(CASING_BRONZE_GEARBOX.get()))
+                    .where("C", Predicates.blocks(ChemicalHelper.getBlock(TagPrefix.frameGt, GTMaterials.Bronze)))
+                    .where("A", blocks(CASING_INDUSTRIAL_STEAM.get()).setMinGlobalLimited(45)
+                            .or(Predicates.abilities(IMPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(EXPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(INPUT_ENERGY).setExactLimit(1))
+                            .or(Predicates.abilities(GTUF_PartAbility.THREAD_HATCH).setExactLimit(1)))
+                    .build())
+            .model(GTMachineModels.createWorkableCasingMachineModel(
+                    GTCEu.id("block/casings/gcym/industrial_steam_casing"),
                     GTCEu.id("block/multiblock/large_chemical_reactor")))
             .register();
 

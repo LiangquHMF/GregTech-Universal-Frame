@@ -13,10 +13,12 @@ import com.gregtechceu.gtceu.common.data.machines.GTMachineUtils;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 import com.gregtechceu.gtceu.common.machine.multiblock.part.SteamHatchPartMachine;
 import com.gregtechceu.gtceu.utils.FormattingUtil;
+import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedFluidHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedParallelHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
+import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -60,6 +62,12 @@ public class GTUF_Machines {
     /** 增强并行仓默认注册档位：LV~UV 八级。 */
     private static final int[] DEFAULT_PARALLEL_HATCH_TIERS = new int[] {
             GTValues.LV, GTValues.MV, GTValues.HV, GTValues.EV, GTValues.IV, GTValues.LuV, GTValues.ZPM, GTValues.UV
+    };
+
+    /** 线程仓默认注册档位：UV~MAX 七级（仿 GTOcore {@code THREAD_HATCH} 注册 tiers）。 */
+    private static final int[] DEFAULT_THREAD_HATCH_TIERS = new int[] {
+            GTValues.UV, GTValues.UHV, GTValues.UEV, GTValues.UIV,
+            GTValues.UXV, GTValues.OpV, GTValues.MAX
     };
 
     /**
@@ -167,6 +175,49 @@ public class GTUF_Machines {
                         Component.translatable("gtceu.machine.steam.steam_hatch.tooltip"))
                 .allowCoverOnFront(true)
                 .register();
+    }
+
+    /**
+     * 注册线程仓（缺省 UV~MAX 七级）：线程数上限 = 2^(tier-LuV)，
+     * 即 UV=4, UHV=8, UEV=16, UIV=32, UXV=64, OpV=128, MAX=256。GUI 中可调 1~上限，默认 1。
+     * 安装该仓室的多方块通过 {@link com.liangqu.gtuf.api.machine.IThreadModifierMachine} 读取
+     * 当前线程数，可同时处理多类配方（配合多线程控制器
+     * {@code com.liangqu.gtuf.common.machine.multiblock.electric.MultiThreadElectricMachine}）。
+     *
+     * <p>公式 {@code 2^(tier-LuV)} 与 GUI 配置模型来源：GTOcore
+     * {@code ThreadHatchPartMachine}（{@code super(holder, tier, 1, 1L << (tier - LuV))}，
+     * 下限 1、上限 2^(tier-LuV)）。</p>
+     *
+     * <p>可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.UV, GTValues.MAX}}），
+     * 缺省为 {@link #DEFAULT_THREAD_HATCH_TIERS}（UV~MAX 七级）。</p>
+     *
+     * @param name        注册名（registerTieredMachines 会加 {@code VN[tier].toLowerCase() + "_"} 前缀）
+     * @param displayName 显示名（前接 {@code GTValues.VNF[tier]}）
+     * @param tiers       要注册的档位（tier 值），缺省注册 UV~MAX 七级
+     * @return 按 tier 索引的 MachineDefinition 数组（tier → definition，未注册档位为 null）
+     */
+    public static MachineDefinition[] registerThreadHatches(String name, String displayName, int... tiers) {
+        if (tiers.length == 0) {
+            tiers = DEFAULT_THREAD_HATCH_TIERS;
+        }
+        for (int tier : tiers) {
+            if (tier < GTValues.LuV) {
+                throw new IllegalArgumentException(
+                        "线程仓仅支持 LuV~MAX（tier " + GTValues.LuV + "~" + GTValues.MAX + "），收到 " + tier);
+            }
+        }
+        return GTMachineUtils.registerTieredMachines(
+                REGISTRATE, name, ThreadHatchPartMachine::new,
+                (tier, builder) -> builder.langValue(GTValues.VNF[tier] + " " + displayName)
+                        .rotationState(RotationState.ALL)
+                        .abilities(GTUF_PartAbility.THREAD_HATCH)
+                        .modelProperty(GTMachineModelProperties.RECIPE_LOGIC_STATUS, RecipeLogic.Status.IDLE)
+                        .model(GTMachineModels.createWorkableTieredHullMachineModel(
+                                GTCEu.id("block/machines/parallel_hatch_mk4")))
+                        .tooltips(Component.translatable("gtuf.machine.thread_hatch.tooltip",
+                                1 << (tier - GTValues.LuV)))
+                        .register(),
+                tiers);
     }
 
     /**

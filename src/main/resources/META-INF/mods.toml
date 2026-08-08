@@ -28,3 +28,10 @@ mandatory = true
 versionRange = "[${gtceu_version},)"
 ordering = "AFTER"
 side = "BOTH"
+# Jade 为可选依赖：仅用于线程仓的线程信息提示显示；未装 Jade 时不影响核心功能。
+[[dependencies."${mod_id}"]]
+modId = "jade"
+mandatory = false
+versionRange = "[11.6.3,)"
+ordering = "AFTER"
+side = "BOTH"

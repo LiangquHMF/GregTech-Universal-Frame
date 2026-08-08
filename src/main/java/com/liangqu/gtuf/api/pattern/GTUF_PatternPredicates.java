@@ -32,6 +32,8 @@ public final class GTUF_PatternPredicates {
     public static final String UNIVERSAL_CASING_TIER_KEY = "UniversalCasingType";
     public static final String UNIVERSAL_FRAME_TIER_KEY = "UniversalFrameType";
     public static final String UNIVERSAL_PIPE_TIER_KEY = "UniversalPipeType";
+    public static final String UNIVERSAL_GEARBOX_TIER_KEY = "UniversalGearboxType";
+
 
     private GTUF_PatternPredicates() {}
 
@@ -96,6 +98,20 @@ public final class GTUF_PatternPredicates {
                 GTBlocks.CASING_TUNGSTENSTEEL_PIPE.get(), 4)),
                 UNIVERSAL_PIPE_TIER_KEY, "gtuf.multiblock.pattern.error.universal_pipe");
     }
+    /**
+     * 通用齿轮箱等级：青铜齿轮箱 → Tier 1，钢齿轮箱 → Tier 2，不锈钢齿轮箱 → Tier 3，，钛齿轮箱 → Tier 4，
+     * 钨钢管道 → Tier 5。结果写入 {@link #UNIVERSAL_GEARBOX_TIER_KEY}。
+     */
+    public static TraceabilityPredicate UniversalGearboxTier() {
+        return tierPredicate(new LinkedHashMap<>(Map.of(
+                GTBlocks.CASING_BRONZE_GEARBOX.get(), 1,
+                GTBlocks.CASING_STEEL_GEARBOX.get(), 2,
+                GTBlocks.CASING_STAINLESS_STEEL_GEARBOX.get(),3,
+                GTBlocks.CASING_TITANIUM_GEARBOX.get(), 4,
+                GTBlocks.CASING_TUNGSTENSTEEL_GEARBOX.get(), 5)),
+                UNIVERSAL_GEARBOX_TIER_KEY, "gtuf.multiblock.pattern.error.universal_gearbox");
+    }
+
 
 
 

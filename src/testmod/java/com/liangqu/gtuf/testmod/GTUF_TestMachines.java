@@ -29,11 +29,12 @@ public class GTUF_TestMachines {
     public static void onRegisterMachines(GTCEuAPI.RegisterEvent<ResourceLocation, MachineDefinition> event) {
         GTUF_Machine_Test.init();
 
-        // 框架注册工厂的 dev 验证：注册增强流体仓/并行仓/工业蒸汽仓（正式发布不含这些预注册）。
+        // 框架注册工厂的 dev 验证：注册增强流体仓/并行仓/工业蒸汽仓/线程仓（正式发布不含这些预注册）。
         // 档位子集示例：只注册 HV/EV 两级验证 tier 参数（其余测试机需要的档位仍由并行/流体工厂提供）。
         GTUF_Machines.registerEnhancedFluidHatches("dev_enhanced_fluid_input", "Enhanced Input Hatch", IO.IN);
         GTUF_Machines.registerEnhancedFluidHatches("dev_enhanced_fluid_output", "Enhanced Output Hatch", IO.OUT);
         GTUF_Machines.registerEnhancedParallelHatches("dev_enhanced_parallel", "Enhanced Parallel Hatch");
         GTUF_Machines.registerIndustrialSteamHatch("dev_industrial_steam", GTUF_Machines.INDUSTRIAL_STEAM_HATCH_CAPACITY);
+        GTUF_Machines.registerThreadHatches("dev_thread", "Thread Hatch");
     }
 }
