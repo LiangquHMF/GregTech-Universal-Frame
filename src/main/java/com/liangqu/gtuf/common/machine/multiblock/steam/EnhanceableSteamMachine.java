@@ -6,11 +6,17 @@ import com.gregtechceu.gtceu.api.recipe.GTRecipeType;
 import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
+import com.gregtechceu.gtceu.common.data.GTBlocks;
 import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
+import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
+import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
+import com.lowdragmc.lowdraglib.syncdata.annotation.RequireRerender;
+import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -25,10 +31,17 @@ import java.util.List;
  *       决定配方速度（Tier1 无加速，加速从 Tier2 开始，公式见 {@link #applyFrameSpeed}）</li>
  * </ul>
  * 等级在结构成形时从 {@link com.gregtechceu.gtceu.api.pattern.util.PatternMatchContext} 读取，
- * 故无需持久化，随结构重新成形即刷新。
+ * 其中外壳等级需要持久化并同步客户端（部件外观渲染按它匹配外壳），随结构重新成形即刷新。
  */
 public class EnhanceableSteamMachine extends SteamMultiBlockBase implements ParallelMachine {
 
+    protected static final ManagedFieldHolder MANAGED_FIELD_HOLDER = new ManagedFieldHolder(
+            EnhanceableSteamMachine.class, SteamMultiBlockBase.MANAGED_FIELD_HOLDER);
+
+    /** 外壳等级（青铜=1，脱氧钢=2）。持久化并同步客户端：成型后部件外观按此匹配外壳。 */
+    @Persisted
+    @DescSynced
+    @RequireRerender
     private int casingTier = 1;
     private int frameTier = 1;
 
@@ -40,6 +53,11 @@ public class EnhanceableSteamMachine extends SteamMultiBlockBase implements Para
         super(holder, false, args);
         this.recipeType = recipeType;
         this.baseParallel = baseParallel;
+    }
+
+    @Override
+    public ManagedFieldHolder getFieldHolder() {
+        return MANAGED_FIELD_HOLDER;
     }
 
     //////////////////////////////////////
@@ -71,6 +89,17 @@ public class EnhanceableSteamMachine extends SteamMultiBlockBase implements Para
 
     public int getFrameTier() {
         return frameTier;
+    }
+
+    /**
+     * 部件外观 = 结构实际使用的外壳：Tier1 青铜机壳（steam_machine_casing），
+     * Tier2 脱氧钢机壳（solid_machine_casing）。这样成型后仓/总线材质与被替换外壳一致。
+     */
+    @Override
+    protected BlockState getPartAppearanceState() {
+        return getCasingTier() >= 2
+                ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState()
+                : GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
     }
 
     //////////////////////////////////////

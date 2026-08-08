@@ -14,6 +14,12 @@ sourceSets {
     main.resources {
         srcDir generatedResources
     }
+    // testmod：测试专用源码集，仅 dev/测试运行环境加载，不打包进公开发布 jar。
+    // 承载测试机器注册类（GTUF_Machine_Test），引用 main 的框架 API（部件类、机器类、注册类）。
+    testmod {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
 }
 
 repositories {
@@ -108,25 +114,25 @@ minecraft {
             property 'forge.logging.console.level', 'debug'
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${buildDir}/createSrgToMcp/output.srg"
+            // dev 运行时同时加载 main 与 testmod 源码集；jar 只打 main，公开发布不含测试内容
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main
+                    source sourceSets.testmod
+                }
+            }
         }
-        //mods {"${mod_id}" {source sourceSets.main}}}
 
         client { property 'forge.enabledGameTestNamespaces', mod_id }
         server { property 'forge.enabledGameTestNamespaces', mod_id; args '--nogui' }
         data {
             workingDirectory project.file('run-data')
-            // 数据生成必需参数
+            // 数据生成必需参数（源码集已由 configureEach 的 mods{} 统一绑定 main + testmod）
             args '--mod', mod_id
             args '--all'
             args '--output', file('src/generated/resources/').getAbsolutePath()
             args '--existing', file('src/main/resources/').getAbsolutePath()
             args '--existing-mod', 'gtceu'
-            // 必须绑定源码集，否则生成器找不到你的模元数据
-            mods {
-                "${mod_id}" {
-                    source sourceSets.main   // 注意是 source，不是 sourceSet
-                }
-            }
         }
     }
 }

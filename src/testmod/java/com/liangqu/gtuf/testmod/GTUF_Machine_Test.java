@@ -1,4 +1,4 @@
-package com.liangqu.gtuf.common.data.machines;
+package com.liangqu.gtuf.testmod;
 
 import com.gregtechceu.gtceu.GTCEu;
 import com.gregtechceu.gtceu.api.capability.recipe.ItemRecipeCapability;
@@ -17,8 +17,10 @@ import com.gregtechceu.gtceu.common.data.GTRecipeModifiers;
 import com.gregtechceu.gtceu.common.data.GTRecipeTypes;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
+import com.liangqu.gtuf.common.data.models.GTUFModels;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
 import com.liangqu.gtuf.common.machine.multiblock.electric.ConfigurableElectricParallelMachine;
+import com.liangqu.gtuf.common.machine.multiblock.electric.EnhanceableElectricMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.TierElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.AdjustableSteamParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.EnhanceableSteamMachine;
@@ -28,15 +30,13 @@ import static com.gregtechceu.gtceu.api.machine.multiblock.PartAbility.*;
 import static com.gregtechceu.gtceu.api.pattern.Predicates.*;
 import static com.gregtechceu.gtceu.common.data.GCYMBlocks.CASING_INDUSTRIAL_STEAM;
 import static com.gregtechceu.gtceu.common.data.GTBlocks.*;
-import static com.gregtechceu.gtceu.common.data.GTBlocks.CASING_BRONZE_BRICKS;
-import static com.gregtechceu.gtceu.common.data.GTBlocks.CASING_BRONZE_PIPE;
-import static com.gregtechceu.gtceu.common.data.GTBlocks.FIREBOX_BRONZE;
 import static com.liangqu.gtuf.api.registry.GTUF_Registries.REGISTRATE;
 import static net.minecraft.world.level.block.Blocks.GLASS;
 
 /**
- * GTUF 测试专用机器注册（框架定位下不随公开发布打包）。
- * 仅含验证用多方块测试机；框架级可复用机器/部件注册见 {@code GTUF_Machines}。
+ * GTUF 测试专用机器注册（框架定位下不随公开发布打包，仅 dev 环境由
+ * {@link GTUF_TestMachines} 加载）。全部为内联多方块结构注册，验证框架机器类；
+ * 正式发布 jar 不含本类。
  */
 public class GTUF_Machine_Test {
     static {
@@ -137,7 +137,7 @@ public class GTUF_Machine_Test {
                             .or(Predicates.abilities(PartAbility.EXPORT_FLUIDS))
                             .or(Predicates.abilities(PartAbility.IMPORT_FLUIDS)))
                     .build())
-            .model(GTMachineModels.createWorkableCasingMachineModel(
+            .model(GTUFModels.createTieredSteamMachineModel(
                     GTCEu.id("block/casings/solid/machine_casing_bronze_plated_bricks"),
                     GTCEu.id("block/multiblock/large_chemical_reactor")))
             .register();
@@ -199,7 +199,7 @@ public class GTUF_Machine_Test {
                             .or(Predicates.abilities(PartAbility.EXPORT_FLUIDS))
                             .or(Predicates.abilities(PartAbility.IMPORT_FLUIDS)))
                     .build())
-            .model(GTMachineModels.createWorkableCasingMachineModel(
+            .model(GTUFModels.createTieredSteamMachineModel(
                     GTCEu.id("block/casings/solid/machine_casing_bronze_plated_bricks"),
                     GTCEu.id("block/multiblock/large_chemical_reactor")))
             .register();
@@ -232,6 +232,39 @@ public class GTUF_Machine_Test {
                     .build())
             .model(GTMachineModels.createWorkableCasingMachineModel(
                     GTCEu.id("block/casings/gcym/industrial_steam_casing"),
+                    GTCEu.id("block/multiblock/large_chemical_reactor")))
+            .register();
+
+    /**
+     * 可增强电力多方块测试机：外壳等级（并行）×框架等级（能耗）×管道等级（速度）。
+     * 构造器 (holder, useFrame=true, usePipe=true)：框架与管道增强均启用。
+     * 外壳 = 钢机壳(T1)/铝防霜(T2)/不锈钢洁净(T3)/钛稳定(T4)/钨钢坚固(T5)；
+     * 框架 = 钢(T1)/铝(T2)/不锈钢(T3)…；管道 = 青铜(T1)/钢(T2)/钛(T3)/钨钢(T4)。
+     */
+    public static final MachineDefinition ENHANCEABLE_ELECTRIC_MIXER = REGISTRATE
+            .multiblock("enhanceable_electric_mixer", holder -> new EnhanceableElectricMachine(
+                    holder, true, true))
+            .rotationState(RotationState.ALL)
+            .appearanceBlock(CASING_STEEL_SOLID)
+            .recipeType(GTRecipeTypes.FORGE_HAMMER_RECIPES)
+            .recipeModifier(EnhanceableElectricMachine::recipeModifier, true)
+            .addOutputLimit(ItemRecipeCapability.CAP, 1)
+            .pattern(definition -> FactoryBlockPattern.start()
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ADDDDA", "AAAAAA")
+                    .aisle("AAAAAA", "ACACCA", "AAAAAA")
+                    .aisle("AAA###", "AKA###", "AAA###")
+                    .where("#", Predicates.any())
+                    .where("K", Predicates.controller(blocks(definition.getBlock())))
+                    .where("D", GTUF_PatternPredicates.UniversalPipeTier())
+                    .where("C", GTUF_PatternPredicates.UniversalFrameTier())
+                    .where("A", GTUF_PatternPredicates.UniversalCasingTier().setMinGlobalLimited(40)
+                            .or(Predicates.abilities(IMPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(EXPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(INPUT_ENERGY).setExactLimit(1)))
+                    .build())
+            .model(GTUFModels.createTieredMachineModel(
+                    GTCEu.id("block/casings/solid/machine_casing_solid_steel"),
                     GTCEu.id("block/multiblock/large_chemical_reactor")))
             .register();
 

@@ -10,7 +10,6 @@ import com.gregtechceu.gtceu.api.recipe.GTRecipeType;
 import com.liangqu.gtuf.GTUF_Core;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
 import com.liangqu.gtuf.common.data.GTUF_Machines;
-import com.liangqu.gtuf.common.data.machines.GTUF_Machine_Test;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -39,9 +38,8 @@ public class CommonProxy {
 
     public void registerMachines(GTCEuAPI.RegisterEvent<ResourceLocation, MachineDefinition> event) {
         GTUF_Machines.init();
-        // 测试专用机器注册（开发/验证用）。框架定位下打包发布时 GTUF_Machine_Test 会整体剔除，
-        // 届时此调用应随源码集拆分迁移到 dev-only 钩子（如 src/testmod）。
-        GTUF_Machine_Test.init();
+        // 测试机器由 testmod 源码集的 GTUF_TestMachines（@Mod.EventBusSubscriber）在 dev 运行时注册。
+        // 公开发布 jar 不含 testmod，故此处无需（也不应）引用测试类。
     }
 
     private void registerRecipeTypes(GTCEuAPI.RegisterEvent<ResourceLocation, GTRecipeType> event) {

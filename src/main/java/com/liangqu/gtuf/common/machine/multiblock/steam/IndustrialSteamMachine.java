@@ -9,22 +9,26 @@ import com.gregtechceu.gtceu.api.recipe.RecipeHelper;
 import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
+import com.gregtechceu.gtceu.common.data.GTBlocks;
 import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
+import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
+import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
 import com.lowdragmc.lowdraglib.gui.util.ClickData;
 import com.lowdragmc.lowdraglib.gui.widget.ComponentPanelWidget;
+import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
+import com.lowdragmc.lowdraglib.syncdata.annotation.RequireRerender;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-
-import static com.liangqu.gtuf.common.data.GTUF_Machines.INDUSTRIAL_STEAM_HATCH;
 
 /**
  * 工业级蒸汽多方块机器。在原生蒸汽机的基础上扩展三个特征：
@@ -59,6 +63,12 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
     /** 是否配备增强蒸汽仓（随结构重成形刷新，不持久化）。 */
     private boolean isOC;
 
+    /** 外壳等级（青铜=1，脱氧钢=2）。持久化并同步客户端：成型后部件外观按此匹配外壳。 */
+    @Persisted
+    @DescSynced
+    @RequireRerender
+    private int casingTier = 1;
+
     public IndustrialSteamMachine(IMachineBlockEntity holder, GTRecipeType recipeType, int maxParallel,
                                   Object... args) {
         super(holder, false, args);
@@ -83,6 +93,22 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
         return targetParallel;
     }
 
+    /** 结构外壳等级（青铜=1，脱氧钢=2）。 */
+    public int getCasingTier() {
+        return casingTier;
+    }
+
+    /**
+     * 部件外观 = 结构实际使用的外壳：Tier1 青铜机壳（steam_machine_casing），
+     * Tier2 脱氧钢机壳（solid_machine_casing）。这样成型后仓/总线材质与被替换外壳一致。
+     */
+    @Override
+    protected BlockState getPartAppearanceState() {
+        return getCasingTier() >= 2
+                ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState()
+                : GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
+    }
+
     //////////////////////////////////////
     // *** Multiblock LifeCycle ***//
     //////////////////////////////////////
@@ -92,16 +118,20 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
         detectOC();
         // 先检测增强仓再调用 super：super 内按 getConversionRate() 动态分派创建蒸汽处理器
         super.onStructureFormed();
+        // 从 MatchContext 读取外壳等级（客户端渲染需同步，见 getPartAppearanceState）
+        var ctx = getMultiblockState().getMatchContext();
+        if (ctx.get(GTUF_PatternPredicates.STEAM_CASING_TIER_KEY) instanceof Integer tier) casingTier = tier;
     }
 
     @Override
     public void onStructureInvalid() {
         super.onStructureInvalid();
         isOC = false;
+        casingTier = 1;
     }
 
     /**
-     * 遍历结构部件，若装有增强蒸汽仓（definition 匹配）则启用 MV 等级与高效转换。
+     * 遍历结构部件，若装有增强蒸汽仓（按部件类判断，不依赖预注册 definition）则启用 MV 等级与高效转换。
      * <p>注意必须读取 {@code matchContext} 中的 "parts" 而不是 {@link #getParts()}：
      * 后者要到 super 链最深处（{@code MultiblockControllerMachine.onStructureFormed()}）才被填充，
      * 而 matchContext 在结构匹配（checkPatternWithLock）时就已经写入部件集合。</p>
@@ -111,7 +141,7 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
         Set<IMultiPart> parts = getMultiblockState().getMatchContext()
                 .getOrCreate("parts", Collections::emptySet);
         for (var part : parts) {
-            if (part.self().getDefinition() == INDUSTRIAL_STEAM_HATCH) {
+            if (part.self() instanceof IndustrialSteamHatchPartMachine) {
                 isOC = true;
                 return;
             }

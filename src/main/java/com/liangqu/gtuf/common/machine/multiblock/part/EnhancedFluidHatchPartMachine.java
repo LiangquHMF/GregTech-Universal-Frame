@@ -56,16 +56,16 @@ public class EnhancedFluidHatchPartMachine extends FluidHatchPartMachine {
         return new NotifiableFluidTank(this, slots, getClampedCapacity(getTier()), io);
     }
 
-    /** 保持 IO 切换：指向本项目增强仓数组（仿原生对 GTMachines.FLUID_IMPORT/EXPORT_HATCH 的引用）。 */
+    /**
+     * 保持 IO 切换：查增强流体仓配对表 {@code (tier, 反向IO)} 得对向仓定义
+     * （仿原生对 GTMachines.FLUID_IMPORT/EXPORT_HATCH 数组的引用）。
+     * 配对表由注册工厂填充；原生 GTM KJS 自定义注册的仓需先手动关联配对表，否则返回 false。
+     */
     @Override
     public boolean swapIO() {
         BlockPos blockPos = getHolder().pos();
-        MachineDefinition newDefinition = null;
-        if (io == IO.IN) {
-            newDefinition = GTUF_Machines.ENHANCED_FLUID_EXPORT_HATCH[this.getTier()];
-        } else if (io == IO.OUT) {
-            newDefinition = GTUF_Machines.ENHANCED_FLUID_IMPORT_HATCH[this.getTier()];
-        }
+        IO targetIo = io == IO.IN ? IO.OUT : IO.IN;
+        MachineDefinition newDefinition = GTUF_Machines.getEnhancedFluidHatch(getTier(), targetIo);
         if (newDefinition == null) return false;
 
         BlockState newBlockState = newDefinition.getBlock().defaultBlockState();
