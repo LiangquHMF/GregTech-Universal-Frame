@@ -14,7 +14,7 @@
     <a href="https://github.com/LiangquHMF/GregTech-Universal-Frame/releases/">
       <img src="https://img.shields.io/github/v/release/LiangquHMF/GregTech-Universal-Frame?style=for-the-badge&color=orange" alt="Latest Version">
     </a>
-    <a href="./LICENSE">
+    <a href="./LICENSE.MD">
       <img src="https://img.shields.io/badge/License-LGPL_v3.0-blue?style=for-the-badge" alt="License">
     </a>
   </p>
@@ -60,4 +60,4 @@ GTUF is a continuously updated mod.The code comes partly from other open-source 
 | **GTL Core** | [AaAdoniSsS](https://github.com/AaAdoniSsS/GTLCore)             | [LGPLv3.0](https://www.gnu.org/licenses/lgpl-3.0.html)                |
 
 ---
-<p align="center">Project's License <a href="./LICENSE">LGPL v3.0</a>.</p>
+<p align="center">Project's License <a href="./LICENSE.MD">LGPL v3.0</a>.</p>
