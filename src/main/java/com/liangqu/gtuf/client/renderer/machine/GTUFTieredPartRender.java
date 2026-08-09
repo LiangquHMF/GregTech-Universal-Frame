@@ -8,10 +8,7 @@ import com.gregtechceu.gtceu.client.model.machine.IControllerModelRenderer;
 import com.gregtechceu.gtceu.client.renderer.machine.DynamicRender;
 import com.gregtechceu.gtceu.client.renderer.machine.DynamicRenderType;
 import com.gregtechceu.gtceu.client.util.ModelUtils;
-import com.liangqu.gtuf.api.machine.ITieredCasingMachine;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.serialization.Codec;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BakedQuad;
@@ -26,6 +23,9 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.model.data.ModelData;
 
+import com.liangqu.gtuf.api.machine.ITieredCasingMachine;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.serialization.Codec;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -39,23 +39,27 @@ import java.util.Map;
  * {@link ITieredCasingMachine#getCasingState()} 返回的实际外壳方块，材质随结构外壳等级匹配
  * （蒸汽机是青铜/脱氧钢两级，电力机可自行把任意等级映射到对应机壳方块）。
  *
- * <p>GTM 默认的部件外观替换（{@code MachineModel#renderPartOverrides}）把部件 "all" 纹理替换成
+ * <p>
+ * GTM 默认的部件外观替换（{@code MachineModel#renderPartOverrides}）把部件 "all" 纹理替换成
  * 控制器模型写死的 {@code baseCasingTexture}，因此外壳换材质时仓室仍显示注册时的纹理；
- * 控制器自身也始终显示该写死纹理。本渲染器仿大锅炉的 {@code BoilerMultiPartRender}：</p>
+ * 控制器自身也始终显示该写死纹理。本渲染器仿大锅炉的 {@code BoilerMultiPartRender}：
+ * </p>
  * <ul>
- *   <li><b>部件</b>（{@link #renderPartModel}）：直接把部件 quads 替换成当前外壳方块状态；</li>
- *   <li><b>控制器自身</b>（{@link #getRenderQuads}）：成型后在 base 模型之上追加同尺寸
- *       外壳立方体 quads。cutout 渲染用 {@code LEQUAL} 深度测试，共面时后画覆盖，
- *       因此成型后控制器显示外壳材质；base 模型凸出 0.002 的 workable overlay 仍保留。</li>
+ * <li><b>部件</b>（{@link #renderPartModel}）：直接把部件 quads 替换成当前外壳方块状态；</li>
+ * <li><b>控制器自身</b>（{@link #getRenderQuads}）：成型后在 base 模型之上追加同尺寸
+ * 外壳立方体 quads。cutout 渲染用 {@code LEQUAL} 深度测试，共面时后画覆盖，
+ * 因此成型后控制器显示外壳材质；base 模型凸出 0.002 的 workable overlay 仍保留。</li>
  * </ul>
  *
- * <p>不限定机器类型：任何实现 {@link ITieredCasingMachine} 的多方块控制器（蒸汽/电力）
+ * <p>
+ * 不限定机器类型：任何实现 {@link ITieredCasingMachine} 的多方块控制器（蒸汽/电力）
  * 都走本渲染器。通过 {@code DynamicRenderManager} 以 {@code gtuf:tiered_steam_parts} 注册类型，
  * 由 {@link com.liangqu.gtuf.common.data.models.GTUFModels#createTieredMachineModel}
- * 附加到控制器模型（{@code addDynamicRenderer}）后生效。</p>
+ * 附加到控制器模型（{@code addDynamicRenderer}）后生效。
+ * </p>
  */
 public class GTUFTieredPartRender extends DynamicRender<MetaMachine, GTUFTieredPartRender>
-        implements IControllerModelRenderer {
+                                  implements IControllerModelRenderer {
 
     // spotless:off
     public static final Codec<GTUFTieredPartRender> CODEC = Codec.unit(GTUFTieredPartRender::new);
@@ -88,8 +92,10 @@ public class GTUFTieredPartRender extends DynamicRender<MetaMachine, GTUFTieredP
     /**
      * 控制器自身渲染：成型后追加 {@link ITieredCasingMachine#getCasingState()} 返回的外壳
      * 立方体 quads，盖住 base 模型注册时写死的立方体材质。
-     * <p>部件（{@link IMultiPart}）不走此路径——它们的 base 由 {@link #renderPartModel} 替换；
-     * 未成型或未实现接口的控制器返回空（显示注册时的 workable base 模型）。</p>
+     * <p>
+     * 部件（{@link IMultiPart}）不走此路径——它们的 base 由 {@link #renderPartModel} 替换；
+     * 未成型或未实现接口的控制器返回空（显示注册时的 workable base 模型）。
+     * </p>
      */
     @Override
     @OnlyIn(Dist.CLIENT)

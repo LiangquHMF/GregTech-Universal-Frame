@@ -4,12 +4,12 @@ import com.gregtechceu.gtceu.api.machine.feature.IRecipeLogicMachine;
 import com.gregtechceu.gtceu.api.machine.feature.multiblock.IMultiController;
 import com.gregtechceu.gtceu.api.machine.trait.RecipeLogic;
 import com.gregtechceu.gtceu.api.recipe.GTRecipe;
-import com.liangqu.gtuf.api.machine.IThreadingRecipeLogic;
-import com.liangqu.gtuf.common.machine.trait.GTUFThreadRegistry;
-import com.liangqu.gtuf.common.machine.trait.GTUFThreadingLogic;
 
 import net.minecraft.nbt.CompoundTag;
 
+import com.liangqu.gtuf.api.machine.IThreadingRecipeLogic;
+import com.liangqu.gtuf.common.machine.trait.GTUFThreadRegistry;
+import com.liangqu.gtuf.common.machine.trait.GTUFThreadingLogic;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,23 +22,31 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * 线程仓推广核心：把多线程能力注入到 GTM 所有电力多方块共用的 {@link RecipeLogic}。
  *
- * <p>采用<b>组合式</b>（而非 new 子类）：{@code MachineTrait} 构造器会
+ * <p>
+ * 采用<b>组合式</b>（而非 new 子类）：{@code MachineTrait} 构造器会
  * {@code machine.attachTraits(this)}，任何 new 出的 RecipeLogic 子类都会被重新
  * attach 进机器 traits（双重冲突）；本 Mixin 在 RecipeLogic 实例上直接挂
- * {@code @Unique} 字段 {@link GTUFThreadingLogic}，与机器 traits 解耦。</p>
+ * {@code @Unique} 字段 {@link GTUFThreadingLogic}，与机器 traits 解耦。
+ * </p>
  *
- * <p>无线程仓时<b>零行为改变</b>：所有注入仅多一次
+ * <p>
+ * 无线程仓时<b>零行为改变</b>：所有注入仅多一次
  * {@code instanceof IMultiController + GTUFThreadRegistry 查表}（O(1) HashMap），
  * 未命中即放行原逻辑。线程模式判定基于 {@link GTUFThreadRegistry} 动态登记，
- * 结构失效后登记移除 → 自动退回原生单槽逻辑。</p>
+ * 结构失效后登记移除 → 自动退回原生单槽逻辑。
+ * </p>
  *
- * <p>状态/进度投影：线程模式下 {@code getProgress/getMaxProgress/getLastRecipe/
+ * <p>
+ * 状态/进度投影：线程模式下 {@code getProgress/getMaxProgress/getLastRecipe/
  * isActive/getStatus} 均投影到第一条活跃配方（默认投影，不改 GTM GUI 代码）；客户端
  * 方块工作渲染经 {@code status} 字段（@DescSynced）由 {@code RecipeLogic#setStatus}
- * 正常同步，无需额外处理。</p>
+ * 正常同步，无需额外处理。
+ * </p>
  *
- * <p>目标 {@code RecipeLogic} 是 GTM mod 类（非原版、无 SRG 映射），故所有
- * {@code @Inject/@Shadow} 均 {@code remap = false}（dev 与正式包类名一致）。</p>
+ * <p>
+ * 目标 {@code RecipeLogic} 是 GTM mod 类（非原版、无 SRG 映射），故所有
+ * {@code @Inject/@Shadow} 均 {@code remap = false}（dev 与正式包类名一致）。
+ * </p>
  */
 @Mixin(RecipeLogic.class)
 public abstract class GTUFRecipeLogicMixin implements IThreadingRecipeLogic {

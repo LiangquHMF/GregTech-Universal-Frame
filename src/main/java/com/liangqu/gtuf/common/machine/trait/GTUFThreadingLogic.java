@@ -14,14 +14,14 @@ import com.gregtechceu.gtceu.api.recipe.RecipeHelper;
 import com.gregtechceu.gtceu.api.recipe.content.Content;
 import com.gregtechceu.gtceu.api.recipe.ingredient.SizedIngredient;
 import com.gregtechceu.gtceu.api.registry.GTRegistries;
-import com.liangqu.gtuf.api.machine.IThreadModifierMachine;
-import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 
+import com.liangqu.gtuf.api.machine.IThreadModifierMachine;
+import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,27 +35,35 @@ import java.util.Map;
 /**
  * 线程化多槽核心：让任意带 {@link RecipeLogic} 的电力多方块同时处理多类配方。
  *
- * <p>本类<b>不是</b> {@link MachineTrait}，也不继承 {@link RecipeLogic}——它是组合式的
+ * <p>
+ * 本类<b>不是</b> {@link MachineTrait}，也不继承 {@link RecipeLogic}——它是组合式的
  * 普通对象，由 {@code GTUFRecipeLogicMixin}（{@code @Mixin(RecipeLogic.class)}）在
  * 线程模式下挂到 RecipeLogic 实例上（{@code @Unique} 字段）。原因：{@link MachineTrait}
  * 构造器会 {@code machine.attachTraits(this)}，任何 {@code new} 出的 RecipeLogic 子类
- * 都会被重新 attach 进机器 traits（双重冲突）；组合式只操作已有实例，无此问题。</p>
+ * 都会被重新 attach 进机器 traits（双重冲突）；组合式只操作已有实例，无此问题。
+ * </p>
  *
- * <p>多槽核心机制（来源 GTNA {@code com.raishxn.gtna.common.machine.trait.
+ * <p>
+ * 多槽核心机制（来源 GTNA {@code com.raishxn.gtna.common.machine.trait.
  * GTNAMultipleRecipesLogic}）：用 {@link List}<{@link ActiveRecipe}> 替代 GTM 单配方
  * {@code lastRecipe}，每个活跃配方独立进度、独立计时；输入在启动时预扣（
  * {@link RecipeHelper#handleRecipeIO} IO.IN），完成时统一输出（IO.OUT）。空闲线程
  * 对每个 recipeType 调 {@link GTRecipeType#searchRecipe} 收集候选，逐个启动——不同
- * 配方类型各自查找、不同配方 ID 可并行，同 ID 配方去重。</p>
+ * 配方类型各自查找、不同配方 ID 可并行，同 ID 配方去重。
+ * </p>
  *
- * <p>与 GTNA 的差异（本实现修正了 GTNA 的能量缺陷）：GTNA 的 serverTick 只推进进度、
+ * <p>
+ * 与 GTNA 的差异（本实现修正了 GTNA 的能量缺陷）：GTNA 的 serverTick 只推进进度、
  * 从不调 tick 级 IO，导致配方<b>不消耗 EU/t</b>；本实现每 tick 先
  * {@link RecipeHelper#handleTickRecipeIO} 扣减 tick 级输入（EU/t 等），不足则该线程
- * 本 tick 停住不推进，补足能量后继续。</p>
+ * 本 tick 停住不推进，补足能量后继续。
+ * </p>
  *
- * <p>状态推进复用 {@link RecipeLogic#setStatus}（public），从而复用其全部副作用：
+ * <p>
+ * 状态推进复用 {@link RecipeLogic#setStatus}（public），从而复用其全部副作用：
  * notifyStatusChanged / renderState 同步 / updateTickSubscription / DescSynced 同步——
- * 客户端方块渲染与 GUI 工作状态无需额外代码即可跟随。</p>
+ * 客户端方块渲染与 GUI 工作状态无需额外代码即可跟随。
+ * </p>
  */
 public class GTUFThreadingLogic {
 
@@ -67,6 +75,7 @@ public class GTUFThreadingLogic {
 
     /** 一个活跃配方：独立进度 + 独立机会缓存。来源 GTNA {@code GTNARecipeUtils.ActiveRecipe}。 */
     public static class ActiveRecipe {
+
         public final GTRecipe recipe;
         public int progress;
         public final int maxProgress;
@@ -169,8 +178,8 @@ public class GTUFThreadingLogic {
         boolean isMachineEnabled = outer.isWorkingEnabled();
         if (isMachineEnabled && activeRecipes.size() < getMaxThreads()) {
             // 空闲节流：无活跃配方且非订阅状态下每 IDLE_SEARCH_INTERVAL tick 才搜索一次
-            if (!activeRecipes.isEmpty() || machine.keepSubscribing()
-                    || metaMachine.getOffsetTimer() % IDLE_SEARCH_INTERVAL == 0) {
+            if (!activeRecipes.isEmpty() || machine.keepSubscribing() ||
+                    metaMachine.getOffsetTimer() % IDLE_SEARCH_INTERVAL == 0) {
                 for (GTRecipe candidate : collectPossibleRecipes(SEARCH_LIMIT)) {
                     if (activeRecipes.size() >= getMaxThreads()) break;
                     if (isRecipeAlreadyActive(candidate)) continue;

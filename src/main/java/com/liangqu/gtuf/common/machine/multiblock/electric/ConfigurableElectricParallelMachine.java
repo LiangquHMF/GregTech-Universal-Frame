@@ -8,10 +8,12 @@ import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
 import com.gregtechceu.gtceu.common.data.GTRecipeModifiers;
+
 import com.lowdragmc.lowdraglib.gui.util.ClickData;
 import com.lowdragmc.lowdraglib.gui.widget.ComponentPanelWidget;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
@@ -20,9 +22,9 @@ import java.util.List;
 /**
  * 可配置并行数的电力多方块机器。
  * <ul>
- *   <li>最大并行数在注册（构建多方块结构）时通过构造参数设置，运行时不可超过该上限；</li>
- *   <li>当前生效并行数（{@link #getTargetParallel()}）可在 GUI 中用 [-] / [+] 调整，
- *       范围为 1 ~ {@link #getMaxParallel()}，并通过 {@code @Persisted} 跨端同步。</li>
+ * <li>最大并行数在注册（构建多方块结构）时通过构造参数设置，运行时不可超过该上限；</li>
+ * <li>当前生效并行数（{@link #getTargetParallel()}）可在 GUI 中用 [-] / [+] 调整，
+ * 范围为 1 ~ {@link #getMaxParallel()}，并通过 {@code @Persisted} 跨端同步。</li>
  * </ul>
  * 配方修改器：先按当前并行数放大配方，再完美过时钟（OC 基于放大后的配方计算）。
  */
@@ -71,12 +73,11 @@ public class ConfigurableElectricParallelMachine extends WorkableElectricMultibl
         int parallels = ParallelLogic.getParallelAmount(machine, recipe, parallelMachine.getTargetParallel());
         if (parallels == 0) return ModifierFunction.NULL;
 
-        ModifierFunction parallelFunc = parallels == 1 ? ModifierFunction.IDENTITY
-                : ModifierFunction.builder()
-                        .modifyAllContents(ContentModifier.multiplier(parallels))
-                        .eutMultiplier(parallels)
-                        .parallels(parallels)
-                        .build();
+        ModifierFunction parallelFunc = parallels == 1 ? ModifierFunction.IDENTITY : ModifierFunction.builder()
+                .modifyAllContents(ContentModifier.multiplier(parallels))
+                .eutMultiplier(parallels)
+                .parallels(parallels)
+                .build();
 
         // 先并行放大配方，再过时钟（OC 基于放大后的配方计算）
         return recipe1 -> {
@@ -103,9 +104,8 @@ public class ConfigurableElectricParallelMachine extends WorkableElectricMultibl
     @Override
     public void handleDisplayClick(String componentData, ClickData clickData) {
         if (clickData.isRemote) return;
-        this.targetParallel = "parallelSub".equals(componentData)
-                ? adjust(targetParallel, false)
-                : adjust(targetParallel, true);
+        this.targetParallel = "parallelSub".equals(componentData) ? adjust(targetParallel, false) :
+                adjust(targetParallel, true);
     }
 
     private int adjust(int current, boolean increase) {

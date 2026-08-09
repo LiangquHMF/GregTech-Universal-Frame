@@ -7,28 +7,32 @@ import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
 import com.gregtechceu.gtceu.common.data.GTBlocks;
-import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
-import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
-import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
+
 import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
 import com.lowdragmc.lowdraglib.syncdata.annotation.RequireRerender;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
 
+import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
+import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
+import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
+
+import java.util.List;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * 可增强蒸汽多方块机器：由结构方块类型驱动两种机制——
  * <ul>
- *   <li><b>外壳等级 (CasingTier)</b>：蒸汽机械方块=1，脱氧钢机械方块=2，
- *       决定最大并行数 = 初始并行数 × 4^(外壳等级-1)</li>
- *   <li><b>框架等级 (FrameTier)</b>：青铜框架=1，钢框架=2，
- *       决定配方速度（Tier1 无加速，加速从 Tier2 开始，公式见 {@link #applyFrameSpeed}）</li>
+ * <li><b>外壳等级 (CasingTier)</b>：蒸汽机械方块=1，脱氧钢机械方块=2，
+ * 决定最大并行数 = 初始并行数 × 4^(外壳等级-1)</li>
+ * <li><b>框架等级 (FrameTier)</b>：青铜框架=1，钢框架=2，
+ * 决定配方速度（Tier1 无加速，加速从 Tier2 开始，公式见 {@link #applyFrameSpeed}）</li>
  * </ul>
  * 等级在结构成形时从 {@link com.gregtechceu.gtceu.api.pattern.util.PatternMatchContext} 读取，
  * 其中外壳等级需要持久化并同步客户端（部件外观渲染按它匹配外壳），随结构重新成形即刷新。
@@ -97,9 +101,8 @@ public class EnhanceableSteamMachine extends SteamMultiBlockBase implements Para
      */
     @Override
     protected BlockState getPartAppearanceState() {
-        return getCasingTier() >= 2
-                ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState()
-                : GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
+        return getCasingTier() >= 2 ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState() :
+                GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
     }
 
     //////////////////////////////////////

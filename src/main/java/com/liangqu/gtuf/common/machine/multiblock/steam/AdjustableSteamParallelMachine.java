@@ -6,19 +6,24 @@ import com.gregtechceu.gtceu.api.recipe.GTRecipeType;
 import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
-import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
-import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
+
 import com.lowdragmc.lowdraglib.gui.util.ClickData;
 import com.lowdragmc.lowdraglib.gui.widget.ComponentPanelWidget;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+
+import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
+import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
+
 import java.util.List;
 
-public class AdjustableSteamParallelMachine extends SteamMultiBlockBase implements ParallelMachine{
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class AdjustableSteamParallelMachine extends SteamMultiBlockBase implements ParallelMachine {
 
     protected static final ManagedFieldHolder MANAGED_FIELD_HOLDER = new ManagedFieldHolder(
             AdjustableSteamParallelMachine.class, SteamMultiBlockBase.MANAGED_FIELD_HOLDER);
@@ -91,10 +96,8 @@ public class AdjustableSteamParallelMachine extends SteamMultiBlockBase implemen
     @Override
     public void handleDisplayClick(String componentData, ClickData clickData) {
         if (!adjustable || clickData.isRemote) return;
-        this.targetParallel = "parallelSub".equals(componentData)
-                ? adjust(targetParallel, false)
-                : adjust(targetParallel, true);
-
+        this.targetParallel = "parallelSub".equals(componentData) ? adjust(targetParallel, false) :
+                adjust(targetParallel, true);
     }
 
     private int adjust(int current, boolean increase) {

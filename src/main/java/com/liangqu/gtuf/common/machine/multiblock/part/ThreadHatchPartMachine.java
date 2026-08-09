@@ -6,10 +6,12 @@ import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity;
 import com.gregtechceu.gtceu.api.machine.feature.multiblock.IMultiController;
 import com.gregtechceu.gtceu.api.machine.multiblock.part.MultiblockPartMachine;
 import com.gregtechceu.gtceu.api.machine.multiblock.part.TieredPartMachine;
+
 import com.lowdragmc.lowdraglib.gui.widget.Widget;
 import com.lowdragmc.lowdraglib.gui.widget.WidgetGroup;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
+
 import com.liangqu.gtuf.api.machine.IThreadModifierMachine;
 import com.liangqu.gtuf.common.machine.trait.GTUFThreadRegistry;
 import org.jetbrains.annotations.NotNull;
@@ -17,17 +19,21 @@ import org.jetbrains.annotations.NotNull;
 /**
  * 线程仓（Thread Hatch）：安装该仓室的多方块可同时处理多类配方。
  *
- * <p>线程数由 GUI 配置（来源 GTOcore {@code com.gtocore.common.machine.multiblock.part.
+ * <p>
+ * 线程数由 GUI 配置（来源 GTOcore {@code com.gtocore.common.machine.multiblock.part.
  * ThreadHatchPartMachine}，其 {@code super(holder, tier, 1, 1L << (tier - LuV))} 设
  * 下限 1、上限 {@code 2^(tier-LuV)}；本类内联 {@link LongInputWidget} 实现等价配置）。
  * 默认 1 线程，GUI 中可调 1 ~ 2^(tier-LuV)：UV=4, UHV=8, UEV=16, UIV=32, UXV=64,
- * OpV=128, MAX=256。</p>
+ * OpV=128, MAX=256。
+ * </p>
  *
- * <p>接入结构时<b>无条件</b>向 {@link GTUFThreadRegistry} 登记自身（Mixin 推广方案下
+ * <p>
+ * 接入结构时<b>无条件</b>向 {@link GTUFThreadRegistry} 登记自身（Mixin 推广方案下
  * 任何电力多方块——含 GTM 原生机器——装本仓即进入线程模式，通过注册表反查线程数），
  * 并保留 {@link IThreadModifierMachine#setThreadPartMachine} 直连分支（来源 GTNA
  * {@code com.raishxn.gtna.common.machine.multiblock.part.ThreadPartMachine} 的
- * {@code addedToController} 挂钩）。线程数 = 基准 1 + (当前配置 - 1) = 当前配置。</p>
+ * {@code addedToController} 挂钩）。线程数 = 基准 1 + (当前配置 - 1) = 当前配置。
+ * </p>
  */
 public class ThreadHatchPartMachine extends TieredPartMachine {
 
@@ -92,11 +98,13 @@ public class ThreadHatchPartMachine extends TieredPartMachine {
      * 成型后允许控制器模型把本仓替换为结构外壳材质（来源 GTM 7.3.0
      * {@code com.gregtechceu.gtceu.api.machine.multiblock.part.MultiblockPartMachine} 的同名方法）。
      *
-     * <p>GTM 7.3.0 起该方法被 {@code GTMachineModelProperties.IS_FORMED} 渲染属性门控——
+     * <p>
+     * GTM 7.3.0 起该方法被 {@code GTMachineModelProperties.IS_FORMED} 渲染属性门控——
      * 仅当部件模型注册了该属性且值为 true 时才替换。GTUF 仓室只注册了 RECIPE_LOGIC_STATUS，
      * 未注册 IS_FORMED → {@code hasProperty(IS_FORMED)} 为 false → 成型后整体跳过替换，
      * 保持注册时的仓室材质。这里改为按 {@link #isFormed()}（控制器位置表非空）判定；
-     * 7.1.4 无此门控（接口默认 true），{@code isFormed()} 与之行为等价且更精确。</p>
+     * 7.1.4 无此门控（接口默认 true），{@code isFormed()} 与之行为等价且更精确。
+     * </p>
      */
     @Override
     public boolean replacePartModelWhenFormed() {

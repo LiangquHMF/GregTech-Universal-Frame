@@ -16,10 +16,11 @@ import com.gregtechceu.gtceu.common.data.GTMaterials;
 import com.gregtechceu.gtceu.common.data.GTRecipeModifiers;
 import com.gregtechceu.gtceu.common.data.GTRecipeTypes;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
+
 import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
-import com.liangqu.gtuf.common.data.models.GTUFModels;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
+import com.liangqu.gtuf.common.data.models.GTUFModels;
 import com.liangqu.gtuf.common.machine.multiblock.electric.ConfigurableElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.EnhanceableElectricMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.MultiThreadElectricMachine;
@@ -41,12 +42,14 @@ import static net.minecraft.world.level.block.Blocks.GLASS;
  * 正式发布 jar 不含本类。
  */
 public class GTUF_Machine_Test {
+
     static {
         REGISTRATE.creativeModeTab(() -> GTUF_CreativeModeTabs.GTUF_TEST);
     }
     public static final MachineDefinition STEAM_MIXER = REGISTRATE
-            .multiblock("steam_mixer", holder -> new AdjustableSteamParallelMachine(holder, GTRecipeTypes.MIXER_RECIPES, 64, 64,
-                    0.5, true))
+            .multiblock("steam_mixer",
+                    holder -> new AdjustableSteamParallelMachine(holder, GTRecipeTypes.MIXER_RECIPES, 64, 64,
+                            0.5, true))
             .rotationState(RotationState.NON_Y_AXIS)
             .appearanceBlock(BRONZE_HULL)
             .recipeType(GTRecipeTypes.MIXER_RECIPES)
@@ -79,13 +82,11 @@ public class GTUF_Machine_Test {
                     .where("#", Predicates.any())
                     .build())
             .model(GTMachineModels.createWorkableCasingMachineModel(
-                            GTCEu.id("block/casings/solid/machine_casing_bronze_plated_bricks"),
-                            GTCEu.id("block/multiblock/large_chemical_reactor"))
+                    GTCEu.id("block/casings/solid/machine_casing_bronze_plated_bricks"),
+                    GTCEu.id("block/multiblock/large_chemical_reactor"))
                     .andThen(b -> b.addDynamicRenderer(() -> DynamicRenderHelper
                             .makeBoilerPartRender(BoilerFireboxType.BRONZE_FIREBOX, CASING_BRONZE_BRICKS))))
             .register();
-
-
 
     public static final MachineDefinition TEST_MACHINE = REGISTRATE
             .multiblock("test_machine", TierElectricParallelMachine::new)

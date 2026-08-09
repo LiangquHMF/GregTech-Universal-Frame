@@ -9,6 +9,7 @@ import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
 import com.gregtechceu.gtceu.common.data.GTRecipeModifiers;
 import com.gregtechceu.gtceu.utils.GTUtil;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 
@@ -38,12 +39,11 @@ public class TierElectricParallelMachine extends WorkableElectricMultiblockMachi
         int parallels = ParallelLogic.getParallelAmount(machine, recipe, parallelMachine.getMaxParallel());
         if (parallels == 0) return ModifierFunction.NULL;
 
-        ModifierFunction parallelFunc = parallels == 1 ? ModifierFunction.IDENTITY
-                : ModifierFunction.builder()
-                        .modifyAllContents(ContentModifier.multiplier(parallels))
-                        .eutMultiplier(parallels)
-                        .parallels(parallels)
-                        .build();
+        ModifierFunction parallelFunc = parallels == 1 ? ModifierFunction.IDENTITY : ModifierFunction.builder()
+                .modifyAllContents(ContentModifier.multiplier(parallels))
+                .eutMultiplier(parallels)
+                .parallels(parallels)
+                .build();
 
         // 先并行放大配方，再过时钟（OC 基于放大后的配方计算）
         return recipe1 -> {

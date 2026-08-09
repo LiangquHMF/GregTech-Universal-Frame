@@ -1,11 +1,12 @@
 package com.liangqu.gtuf.config;
 
-import com.liangqu.gtuf.GTUF_Core;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.config.ModConfigEvent;
+
+import com.liangqu.gtuf.GTUF_Core;
 
 import java.util.Set;
 
@@ -42,4 +43,3 @@ public class GTUF_Config {
         magicNumberIntroduction = MAGIC_NUMBER_INTRODUCTION.get();
     }
 }
-

@@ -3,6 +3,7 @@ package com.liangqu.gtuf.api.machine.feature;
 import com.gregtechceu.gtceu.api.recipe.GTRecipe;
 
 import org.jetbrains.annotations.Nullable;
+
 /**
  * @author Raishxn
  */

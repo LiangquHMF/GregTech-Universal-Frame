@@ -10,35 +10,39 @@ import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
 import com.gregtechceu.gtceu.common.data.GTBlocks;
-import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
-import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
-import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
-import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
+
 import com.lowdragmc.lowdraglib.gui.util.ClickData;
 import com.lowdragmc.lowdraglib.gui.widget.ComponentPanelWidget;
 import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
 import com.lowdragmc.lowdraglib.syncdata.annotation.RequireRerender;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
+import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
+import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
+import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 /**
  * 工业级蒸汽多方块机器。在原生蒸汽机的基础上扩展三个特征：
  * <ul>
- *   <li><b>GUI 可调并行数</b>：原生蒸汽机并行数固定，本机可用 {@code [-]} / {@code [+]} 在 GUI 中
- *       按 ×2 / ÷2 调整（范围 1 ~ {@link #getMaxParallel()}），类似 {@link AdjustableSteamParallelMachine}；</li>
- *   <li><b>增强蒸汽仓</b>：可搭配 {@link com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine}
- *       （容量为原生 16 倍），用于高并行 / MV 配方下的蒸汽储备；</li>
- *   <li><b>重写蒸汽→EU 转换公式</b>：配增强蒸汽仓时转换率 {@code 0.25 mB/EU}（1 mB 蒸汽 = 4 EU），
- *       可处理 MV(128 EU/t) 配方；无增强仓时保持原生 {@code 1.0 mB/EU}，仍只处理 LV 配方。</li>
+ * <li><b>GUI 可调并行数</b>：原生蒸汽机并行数固定，本机可用 {@code [-]} / {@code [+]} 在 GUI 中
+ * 按 ×2 / ÷2 调整（范围 1 ~ {@link #getMaxParallel()}），类似 {@link AdjustableSteamParallelMachine}；</li>
+ * <li><b>增强蒸汽仓</b>：可搭配 {@link com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine}
+ * （容量为原生 16 倍），用于高并行 / MV 配方下的蒸汽储备；</li>
+ * <li><b>重写蒸汽→EU 转换公式</b>：配增强蒸汽仓时转换率 {@code 0.25 mB/EU}（1 mB 蒸汽 = 4 EU），
+ * 可处理 MV(128 EU/t) 配方；无增强仓时保持原生 {@code 1.0 mB/EU}，仍只处理 LV 配方。</li>
  * </ul>
  * 转换公式封装在可覆盖的 {@link #getConversionRate()} 中，如需修改直接覆盖该方法。
  */
@@ -104,9 +108,8 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
      */
     @Override
     protected BlockState getPartAppearanceState() {
-        return getCasingTier() >= 2
-                ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState()
-                : GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
+        return getCasingTier() >= 2 ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState() :
+                GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
     }
 
     //////////////////////////////////////
@@ -132,9 +135,11 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
 
     /**
      * 遍历结构部件，若装有增强蒸汽仓（按部件类判断，不依赖预注册 definition）则启用 MV 等级与高效转换。
-     * <p>注意必须读取 {@code matchContext} 中的 "parts" 而不是 {@link #getParts()}：
+     * <p>
+     * 注意必须读取 {@code matchContext} 中的 "parts" 而不是 {@link #getParts()}：
      * 后者要到 super 链最深处（{@code MultiblockControllerMachine.onStructureFormed()}）才被填充，
-     * 而 matchContext 在结构匹配（checkPatternWithLock）时就已经写入部件集合。</p>
+     * 而 matchContext 在结构匹配（checkPatternWithLock）时就已经写入部件集合。
+     * </p>
      */
     private void detectOC() {
         isOC = false;
@@ -201,9 +206,8 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
     @Override
     public void handleDisplayClick(String componentData, ClickData clickData) {
         if (clickData.isRemote) return;
-        this.targetParallel = "parallelSub".equals(componentData)
-                ? adjust(targetParallel, false)
-                : adjust(targetParallel, true);
+        this.targetParallel = "parallelSub".equals(componentData) ? adjust(targetParallel, false) :
+                adjust(targetParallel, true);
     }
 
     private int adjust(int current, boolean increase) {

@@ -14,8 +14,7 @@ import com.gregtechceu.gtceu.api.machine.trait.NotifiableFluidTank;
 import com.gregtechceu.gtceu.api.machine.trait.RecipeHandlerList;
 import com.gregtechceu.gtceu.common.data.GTBlocks;
 import com.gregtechceu.gtceu.common.data.GTMaterials;
-import com.liangqu.gtuf.api.machine.ITieredCasingMachine;
-import com.liangqu.gtuf.api.machine.feature.IPatternBufferModeHost;
+
 import com.lowdragmc.lowdraglib.gui.modular.ModularUI;
 import com.lowdragmc.lowdraglib.gui.texture.IGuiTexture;
 import com.lowdragmc.lowdraglib.gui.util.ClickData;
@@ -23,6 +22,7 @@ import com.lowdragmc.lowdraglib.gui.widget.ComponentPanelWidget;
 import com.lowdragmc.lowdraglib.gui.widget.DraggableScrollableWidgetGroup;
 import com.lowdragmc.lowdraglib.gui.widget.LabelWidget;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -31,11 +31,16 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 
-import javax.annotation.Nullable;
+import com.liangqu.gtuf.api.machine.ITieredCasingMachine;
+import com.liangqu.gtuf.api.machine.feature.IPatternBufferModeHost;
+
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 public class SteamMultiBlockBase extends WorkableMultiblockMachine
-        implements IDisplayUIMachine, IPatternBufferModeHost, ITieredCasingMachine {
+                                 implements IDisplayUIMachine, IPatternBufferModeHost, ITieredCasingMachine {
+
     public static final ManagedFieldHolder MANAGED_FIELD_HOLDER = new ManagedFieldHolder(
             SteamMultiBlockBase.class, WorkableMultiblockMachine.MANAGED_FIELD_HOLDER);
 
@@ -94,13 +99,17 @@ public class SteamMultiBlockBase extends WorkableMultiblockMachine
     /**
      * 成型后部件（仓/总线）渲染成被替换外壳的材质。
      *
-     * <p>GTM 默认部件外观固定等于注册时 {@code appearanceBlock}（{@code partAppearance}
+     * <p>
+     * GTM 默认部件外观固定等于注册时 {@code appearanceBlock}（{@code partAppearance}
      * 默认返回 {@code definition.getAppearance().get()}），无法随结构<b>实际使用</b>的外壳变化。
      * 等级机器（青铜/脱氧钢外壳二选一）应覆盖此方法返回对应外壳的方块状态；
-     * 返回 null 则沿用默认行为（不参与外观覆盖）。</p>
+     * 返回 null 则沿用默认行为（不参与外观覆盖）。
+     * </p>
      *
-     * <p>注意覆盖 {@link #getPartAppearance(IMultiPart, Direction, BlockState, BlockPos)}
-     * 时须保证客户端能拿到等级（子类应把等级字段标 {@code @Persisted @DescSynced @RequireRerender}）。</p>
+     * <p>
+     * 注意覆盖 {@link #getPartAppearance(IMultiPart, Direction, BlockState, BlockPos)}
+     * 时须保证客户端能拿到等级（子类应把等级字段标 {@code @Persisted @DescSynced @RequireRerender}）。
+     * </p>
      */
     @Override
     public int getCasingTier() {
@@ -109,15 +118,16 @@ public class SteamMultiBlockBase extends WorkableMultiblockMachine
 
     /**
      * 外壳等级 → 外壳方块状态：Tier1 蒸汽机械方块（青铜砖），Tier2 及以上脱氧钢机械方块。
-     * <p>实现 {@link ITieredCasingMachine} 接口，供渲染器（控制器自身 + 仓室/总线）
-     * 按结构实际使用的外壳匹配材质。</p>
+     * <p>
+     * 实现 {@link ITieredCasingMachine} 接口，供渲染器（控制器自身 + 仓室/总线）
+     * 按结构实际使用的外壳匹配材质。
+     * </p>
      */
     @Nullable
     @Override
     public BlockState getCasingState(int tier) {
-        return tier >= 2
-                ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState()
-                : GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
+        return tier >= 2 ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState() :
+                GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
     }
 
     @Nullable

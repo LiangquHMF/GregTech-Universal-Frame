@@ -10,37 +10,43 @@ import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
 import com.gregtechceu.gtceu.common.data.GTBlocks;
 import com.gregtechceu.gtceu.common.data.GTRecipeModifiers;
-import com.liangqu.gtuf.api.machine.ITieredCasingMachine;
-import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
+
 import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
 import com.lowdragmc.lowdraglib.syncdata.annotation.RequireRerender;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.state.BlockState;
 
-import javax.annotation.Nullable;
+import com.liangqu.gtuf.api.machine.ITieredCasingMachine;
+import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
+
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 /**
  * 可增强电力多方块机器：由结构方块类型驱动三种机制，外壳必用，框架/管道可选。
  * <ul>
- *   <li><b>外壳等级 (UniversalCasing)</b>：钢=1、铝=2、不锈钢=3、钛=4、钨钢=5，
- *       决定最大并行数 = 初始并行数 × 2^(外壳等级-1)（初始并行数默认 4：钢=4、铝=8、不锈钢=16）</li>
- *   <li><b>框架等级 (UniversalFrame)</b>（构造器 useFrame=true 时启用）：钢=1、铝=2、不锈钢=3…
- *       决定能耗倍率 = 1 - (框架等级-1) × 0.05（钢=100%、铝=95%、不锈钢=90%）</li>
- *   <li><b>管道等级 (UniversalPipe)</b>（构造器 usePipe=true 时启用）：青铜=1、钢=2、钛=3、钨钢=4…
- *       决定配方时长倍率 = 1 - (管道等级-1) × 0.1（青铜=1、钢=0.9、钛=0.7、钨钢=0.6）</li>
+ * <li><b>外壳等级 (UniversalCasing)</b>：钢=1、铝=2、不锈钢=3、钛=4、钨钢=5，
+ * 决定最大并行数 = 初始并行数 × 2^(外壳等级-1)（初始并行数默认 4：钢=4、铝=8、不锈钢=16）</li>
+ * <li><b>框架等级 (UniversalFrame)</b>（构造器 useFrame=true 时启用）：钢=1、铝=2、不锈钢=3…
+ * 决定能耗倍率 = 1 - (框架等级-1) × 0.05（钢=100%、铝=95%、不锈钢=90%）</li>
+ * <li><b>管道等级 (UniversalPipe)</b>（构造器 usePipe=true 时启用）：青铜=1、钢=2、钛=3、钨钢=4…
+ * 决定配方时长倍率 = 1 - (管道等级-1) × 0.1（青铜=1、钢=0.9、钛=0.7、钨钢=0.6）</li>
  * </ul>
  * 等级在结构成形时从 {@link com.gregtechceu.gtceu.api.pattern.util.PatternMatchContext} 读取。
  * 外壳等级需持久化并同步客户端：控制器自身与仓室按
  * {@link ITieredCasingMachine#getCasingState()} 渲染成结构实际使用的外壳方块。
  *
- * <p>注册时挂载 {@code .recipeModifier(EnhanceableElectricMachine::recipeModifier, true)}，
- * 先用 {@code createTieredMachineModel} 模型工厂（成型后部件/控制器匹配外壳材质）。</p>
+ * <p>
+ * 注册时挂载 {@code .recipeModifier(EnhanceableElectricMachine::recipeModifier, true)}，
+ * 先用 {@code createTieredMachineModel} 模型工厂（成型后部件/控制器匹配外壳材质）。
+ * </p>
  */
 public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachine implements ITieredCasingMachine {
 
@@ -208,9 +214,11 @@ public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachin
      * 配方修改器：先并行放大（外壳），再应用框架能耗倍率与管道时长倍率，最后完美过时钟。
      * 注册时用 {@code .recipeModifier(EnhanceableElectricMachine::recipeModifier, true)} 挂载。
      *
-     * <p>能耗倍率通过 {@code ModifierFunction#eutMultiplier} 应用（只作用于 tick 能量 content，
+     * <p>
+     * 能耗倍率通过 {@code ModifierFunction#eutMultiplier} 应用（只作用于 tick 能量 content，
      * 且并行与能耗合并为单一倍率 {@code parallels × energyMultiplier} 一次设置）；
-     * 时长倍率通过 {@code ModifierFunction#durationMultiplier} 应用。</p>
+     * 时长倍率通过 {@code ModifierFunction#durationMultiplier} 应用。
+     * </p>
      */
     public static ModifierFunction recipeModifier(MetaMachine machine, GTRecipe recipe) {
         if (!(machine instanceof EnhanceableElectricMachine enhanceable)) return ModifierFunction.NULL;
@@ -249,14 +257,14 @@ public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachin
                 textList.add(Component.translatable("gtuf.multiblock.frame_tier", frameTier)
                         .withStyle(ChatFormatting.GRAY));
                 textList.add(Component.translatable("gtuf.multiblock.energy_multiplier",
-                                (int) Math.round(getEnergyMultiplier() * 100) + "%")
+                        (int) Math.round(getEnergyMultiplier() * 100) + "%")
                         .withStyle(ChatFormatting.GOLD));
             }
             if (usePipe) {
                 textList.add(Component.translatable("gtuf.multiblock.pipe_tier", pipeTier)
                         .withStyle(ChatFormatting.GRAY));
                 textList.add(Component.translatable("gtuf.multiblock.speed_multiplier",
-                                String.format("%.1f", getSpeedMultiplier()))
+                        String.format("%.1f", getSpeedMultiplier()))
                         .withStyle(ChatFormatting.GOLD));
             }
         }

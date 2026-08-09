@@ -9,18 +9,22 @@ import com.gregtechceu.gtceu.api.machine.trait.NotifiableFluidTank;
 import com.gregtechceu.gtceu.common.data.GTMaterials;
 import com.gregtechceu.gtceu.common.machine.multiblock.part.FluidHatchPartMachine;
 import com.gregtechceu.gtceu.common.machine.multiblock.part.SteamHatchPartMachine;
+
 import com.lowdragmc.lowdraglib.gui.modular.ModularUI;
 import com.lowdragmc.lowdraglib.gui.widget.ImageWidget;
 import com.lowdragmc.lowdraglib.gui.widget.LabelWidget;
+
 import net.minecraft.world.entity.player.Player;
 
 /**
  * 工业级蒸汽输入仓（增强蒸汽仓）：仿原生 {@link SteamHatchPartMachine}，仅接受蒸汽。
  *
- * <p><b>容量可配置</b>：注册机器时可通过带容量参数的构造指定最大容量（mB），
+ * <p>
+ * <b>容量可配置</b>：注册机器时可通过带容量参数的构造指定最大容量（mB），
  * 例如 {@code holder -> new IndustrialSteamHatchPartMachine(holder, 2_048_000)}；
  * 未指定时使用默认容量 {@value #DEFAULT_TANK_CAPACITY} mB（原生蒸汽仓 × 16），
- * 用于支撑高并行 / MV 配方。</p>
+ * 用于支撑高并行 / MV 配方。
+ * </p>
  */
 public class IndustrialSteamHatchPartMachine extends FluidHatchPartMachine {
 
@@ -41,6 +45,7 @@ public class IndustrialSteamHatchPartMachine extends FluidHatchPartMachine {
 
     /**
      * 指定容量的构造。注册时用 lambda 捕获容量，例如：
+     * 
      * <pre>{@code .machine("industrial_steam_input_hatch",
      *          holder -> new IndustrialSteamHatchPartMachine(holder, 2_048_000))}</pre>
      */
@@ -86,11 +91,13 @@ public class IndustrialSteamHatchPartMachine extends FluidHatchPartMachine {
      * 成型后允许控制器模型把本仓替换为结构外壳材质（来源 GTM 7.3.0
      * {@code com.gregtechceu.gtceu.api.machine.multiblock.part.MultiblockPartMachine} 的同名方法）。
      *
-     * <p>GTM 7.3.0 起该方法被 {@code GTMachineModelProperties.IS_FORMED} 渲染属性门控——
+     * <p>
+     * GTM 7.3.0 起该方法被 {@code GTMachineModelProperties.IS_FORMED} 渲染属性门控——
      * 仅当部件模型注册了该属性且值为 true 时才替换。GTUF 仓室只注册了 RECIPE_LOGIC_STATUS，
      * 未注册 IS_FORMED → {@code hasProperty(IS_FORMED)} 为 false → 成型后整体跳过替换，
      * 保持注册时的仓室材质。这里改为按 {@link #isFormed()}（控制器位置表非空）判定；
-     * 7.1.4 无此门控（接口默认 true），{@code isFormed()} 与之行为等价且更精确。</p>
+     * 7.1.4 无此门控（接口默认 true），{@code isFormed()} 与之行为等价且更精确。
+     * </p>
      */
     @Override
     public boolean replacePartModelWhenFormed() {

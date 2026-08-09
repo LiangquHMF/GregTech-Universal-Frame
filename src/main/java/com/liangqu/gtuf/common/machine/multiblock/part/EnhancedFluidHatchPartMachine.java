@@ -6,21 +6,27 @@ import com.gregtechceu.gtceu.api.machine.MachineDefinition;
 import com.gregtechceu.gtceu.api.machine.trait.NotifiableFluidTank;
 import com.gregtechceu.gtceu.common.machine.multiblock.part.FluidHatchPartMachine;
 import com.gregtechceu.gtceu.utils.GTMath;
-import com.liangqu.gtuf.common.data.GTUF_Machines;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.state.BlockState;
+
+import com.liangqu.gtuf.common.data.GTUF_Machines;
 
 /**
  * 增强型流体输入/输出仓：仿原生 {@link FluidHatchPartMachine}。
  *
- * <p><b>容量公式</b>：原生 {@code initialCapacity * (1 << min(9, tier))} 在 tier≥9 封顶不再增长；
+ * <p>
+ * <b>容量公式</b>：原生 {@code initialCapacity * (1 << min(9, tier))} 在 tier≥9 封顶不再增长；
  * 本机改为 {@code initialCapacity * pow(4, tier)}，移除封顶且每级 ×4（增长率 = 原生 ×2）：
- * ULV=8,000 / LV=32,000 / MV=128,000 / ... / UHV=2,097,152,000 / UEV=8,388,608,000（超 int）...</p>
+ * ULV=8,000 / LV=32,000 / MV=128,000 / ... / UHV=2,097,152,000 / UEV=8,388,608,000（超 int）...
+ * </p>
  *
- * <p><b>存储架构</b>：float 理论容量（tooltip 展示，可超 int）+ int 实际存储（tank 容量经
+ * <p>
+ * <b>存储架构</b>：float 理论容量（tooltip 展示，可超 int）+ int 实际存储（tank 容量经
  * {@link GTMath#saturatedCast(long)} 钳回，UHV 及以内真实，UEV 起钳到 {@link Integer#MAX_VALUE}≈21.4 亿）。
  * 因 {@code 8000*4^tier = 125*2^(6+2tier)}，尾数恒为 125（7 bit）≤ float 的 24 bit 尾数，
- * 全部档位在 float 中均精确表示，无精度损失。</p>
+ * 全部档位在 float 中均精确表示，无精度损失。
+ * </p>
  */
 public class EnhancedFluidHatchPartMachine extends FluidHatchPartMachine {
 
@@ -87,11 +93,13 @@ public class EnhancedFluidHatchPartMachine extends FluidHatchPartMachine {
      * 成型后允许控制器模型把本仓替换为结构外壳材质（来源 GTM 7.3.0
      * {@code com.gregtechceu.gtceu.api.machine.multiblock.part.MultiblockPartMachine} 的同名方法）。
      *
-     * <p>GTM 7.3.0 起该方法被 {@code GTMachineModelProperties.IS_FORMED} 渲染属性门控——
+     * <p>
+     * GTM 7.3.0 起该方法被 {@code GTMachineModelProperties.IS_FORMED} 渲染属性门控——
      * 仅当部件模型注册了该属性且值为 true 时才替换。GTUF 仓室只注册了 RECIPE_LOGIC_STATUS，
      * 未注册 IS_FORMED → {@code hasProperty(IS_FORMED)} 为 false → 成型后整体跳过替换，
      * 保持注册时的仓室材质。这里改为按 {@link #isFormed()}（控制器位置表非空）判定；
-     * 7.1.4 无此门控（接口默认 true），{@code isFormed()} 与之行为等价且更精确。</p>
+     * 7.1.4 无此门控（接口默认 true），{@code isFormed()} 与之行为等价且更精确。
+     * </p>
      */
     @Override
     public boolean replacePartModelWhenFormed() {

@@ -6,13 +6,17 @@ import com.gregtechceu.gtceu.api.capability.recipe.IO;
 import com.gregtechceu.gtceu.api.data.RotationState;
 import com.gregtechceu.gtceu.api.machine.MachineDefinition;
 import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility;
-import com.gregtechceu.gtceu.api.registry.registrate.MachineBuilder;
 import com.gregtechceu.gtceu.api.machine.property.GTMachineModelProperties;
 import com.gregtechceu.gtceu.api.machine.trait.RecipeLogic;
+import com.gregtechceu.gtceu.api.registry.registrate.MachineBuilder;
 import com.gregtechceu.gtceu.common.data.machines.GTMachineUtils;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 import com.gregtechceu.gtceu.common.machine.multiblock.part.SteamHatchPartMachine;
 import com.gregtechceu.gtceu.utils.FormattingUtil;
+
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+
 import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
 import com.liangqu.gtuf.common.data.models.GTUFModels;
@@ -20,8 +24,6 @@ import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedFluidHatchPartMac
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedParallelHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
-import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -33,13 +35,16 @@ import static com.liangqu.gtuf.api.registry.GTUF_Registries.REGISTRATE;
 /**
  * GTUF 公开机器注册入口（框架级），仿原生 {@code GTMachines}。
  *
- * <p>框架定位：公开发布 jar 只提供"方法和接口"，<b>不预注册任何机器实例</b>。
+ * <p>
+ * 框架定位：公开发布 jar 只提供"方法和接口"，<b>不预注册任何机器实例</b>。
  * 增强流体仓、增强并行仓、工业蒸汽仓均由整合包作者通过本类的<b>公开注册工厂</b>
  * （Java/KubeJS/CrT 调用）按需注册。因此本类没有静态注册字段，只有工厂与配对表。
  *
- * <p>测试专用机器在 {@code GTUF_Machine_Test}（testmod 源码集），不随公开发布打包。
+ * <p>
+ * 测试专用机器在 {@code GTUF_Machine_Test}（testmod 源码集），不随公开发布打包。
  * 框架代码（部件类、机器类、本注册类）禁止引用测试类，避免打包剔除测试内容后断链。
- * 依赖方向：{@code GTUF_Machine_Test} → {@code GTUF_Machines}（测试可依赖框架，反之不可）。</p>
+ * 依赖方向：{@code GTUF_Machine_Test} → {@code GTUF_Machines}（测试可依赖框架，反之不可）。
+ * </p>
  */
 public class GTUF_Machines {
 
@@ -75,10 +80,12 @@ public class GTUF_Machines {
      * 注册增强型流体仓（容量 = 8000 * 4^tier，每级 ×4 无封顶；缺省档位 ULV~UHV，highTier 开启含 UEV+）。
      * tooltip 显示 float 理论容量；实际 tank 容量 int 钳制。仿原生 GTMachines.FLUID_IMPORT_HATCH。
      *
-     * <p>可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.LV, GTValues.EV}}），
+     * <p>
+     * 可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.LV, GTValues.EV}}），
      * 缺省为 {@link GTMachineUtils#ALL_TIERS}。部件能力由 {@code io} 推导（IN→IMPORT_FLUIDS，
      * OUT→EXPORT_FLUIDS）。注册后自动填充 {@link #ENHANCED_FLUID_HATCHES} 配对表（仅已注册档位），
-     * 供 swapIO 反查。</p>
+     * 供 swapIO 反查。
+     * </p>
      *
      * @param name        注册名（registerTieredMachines 会加 {@code VN[tier].toLowerCase() + "_"} 前缀）
      * @param displayName 显示名（前接 {@code GTValues.VNF[tier]}）
@@ -124,8 +131,10 @@ public class GTUF_Machines {
      * 前期每级 ×2 保证低等级可用，后期（LuV 起）每级 ×4 追平原生增幅（原生 UV=256，本机为 4 倍）。
      * 机器端通过 {@code GTRecipeModifiers.PARALLEL_HATCH} 读取当前并行数放大配方。
      *
-     * <p>可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.HV, GTValues.EV}}），
-     * 仅支持 LV~UV（1~8）——并行仓模型纹理与公式仅覆盖该区间。</p>
+     * <p>
+     * 可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.HV, GTValues.EV}}），
+     * 仅支持 LV~UV（1~8）——并行仓模型纹理与公式仅覆盖该区间。
+     * </p>
      *
      * @param name        注册名（registerTieredMachines 会加 {@code VN[tier].toLowerCase() + "_"} 前缀）
      * @param displayName 显示名（前接 {@code GTValues.VNF[tier]}）
@@ -188,12 +197,16 @@ public class GTUF_Machines {
      * 当前线程数，可同时处理多类配方（配合多线程控制器
      * {@code com.liangqu.gtuf.common.machine.multiblock.electric.MultiThreadElectricMachine}）。
      *
-     * <p>公式 {@code 2^(tier-LuV)} 与 GUI 配置模型来源：GTOcore
+     * <p>
+     * 公式 {@code 2^(tier-LuV)} 与 GUI 配置模型来源：GTOcore
      * {@code ThreadHatchPartMachine}（{@code super(holder, tier, 1, 1L << (tier - LuV))}，
-     * 下限 1、上限 2^(tier-LuV)）。</p>
+     * 下限 1、上限 2^(tier-LuV)）。
+     * </p>
      *
-     * <p>可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.UV, GTValues.MAX}}），
-     * 缺省为 {@link #DEFAULT_THREAD_HATCH_TIERS}（UV~MAX 七级）。</p>
+     * <p>
+     * 可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.UV, GTValues.MAX}}），
+     * 缺省为 {@link #DEFAULT_THREAD_HATCH_TIERS}（UV~MAX 七级）。
+     * </p>
      *
      * @param name        注册名（registerTieredMachines 会加 {@code VN[tier].toLowerCase() + "_"} 前缀）
      * @param displayName 显示名（前接 {@code GTValues.VNF[tier]}）
@@ -232,16 +245,20 @@ public class GTUF_Machines {
      * {@code GTCEuStartupEvents.registry('gtceu:machine', ...)} 的 'custom' 分级 builder 的
      * {@code .definition((tier, builder) => ...)} 回调里调用。
      *
-     * <p>为什么需要这个方法：{@code MachineBuilder.colorOverlayTieredHullModel} 的三参 String 重载
+     * <p>
+     * 为什么需要这个方法：{@code MachineBuilder.colorOverlayTieredHullModel} 的三参 String 重载
      * 中间那个可选的 pipeOverlay 参数原生是 null（GTM 流体/物品仓都传 null），但 KubeJS 的 Rhino
      * 引擎无法给该重载传 null——null 会同时匹配 {@code (String,String,String)} 与
      * {@code (ResourceLocation,...)} 两个重载，抛 {@code EvaluatorException: ambiguous} 直接崩启动。
-     * 此方法在 Java 侧把 null 包装掉，JS 侧只需传 overlay 与 emissive 两个纹理名，无歧义。</p>
+     * 此方法在 Java 侧把 null 包装掉，JS 侧只需传 overlay 与 emissive 两个纹理名，无歧义。
+     * </p>
      *
-     * <p>用法（脚本内）：{@code GTUF_Machines.colorOverlayHull(builder,
+     * <p>
+     * 用法（脚本内）：{@code GTUF_Machines.colorOverlayHull(builder,
      * 'overlay_pipe_in_emissive', 'overlay_fluid_hatch')}。overlay 是管道纹理（KJS builder 的
      * REGISTRATE modid 是 gtceu，纹理名会在 gtceu:block/overlay/machine/ 下解析），emissive 是
-     * 发光层（如流体仓的 overlay_fluid_hatch）。</p>
+     * 发光层（如流体仓的 overlay_fluid_hatch）。
+     * </p>
      *
      * @param builder  原生 MachineBuilder（'custom' 分级 builder 的 definition 回调参数）
      * @param overlay  主 overlay 纹理名，如 overlay_pipe_in_emissive / overlay_pipe_out_emissive
@@ -257,19 +274,23 @@ public class GTUF_Machines {
      * {@code GTCEuStartupEvents.registry('gtceu:machine', ...)} 的 'custom' 分级 builder 的
      * {@code .definition((tier, builder) => ...)} 回调里调用。
      *
-     * <p>为什么需要这个方法：{@code MachineBuilder.overlaySteamHullModel} 有 {@code (String)} 与
+     * <p>
+     * 为什么需要这个方法：{@code MachineBuilder.overlaySteamHullModel} 有 {@code (String)} 与
      * {@code (ResourceLocation)} 两个重载。KubeJS 给 {@code ResourceLocation} 注册了 TypeWrapper
      * （{@code CharSequence → RL}），把 JS 字符串到 String 的转换权重与到 RL 的权重拉平；而 Rhino
      * 对 NativeJavaObject（{@code GTCEu.id(...)} 的返回值）到 String 的转换权重也拉到相同——实测
      * <b>无论传 JS 字符串还是 {@code GTCEu.id(...)} 的 RL 对象都会抛 {@code EvaluatorException: ambiguous}</b>
-     * 崩启动。此方法在 Java 侧直接调 {@code (ResourceLocation)} 重载，避开 Rhino 重载解析。</p>
+     * 崩启动。此方法在 Java 侧直接调 {@code (ResourceLocation)} 重载，避开 Rhino 重载解析。
+     * </p>
      *
-     * <p>用法（脚本内）：{@code GTUF_Machines.overlaySteamHull(builder, 'steam_hatch')}。
+     * <p>
+     * 用法（脚本内）：{@code GTUF_Machines.overlaySteamHull(builder, 'steam_hatch')}。
      * 底层等价于 {@code builder.overlaySteamHullModel(GTCEu.id("block/machine/part/steam_hatch"))}，
-     * 与 {@link #registerIndustrialSteamHatch} 的 proven 写法一致。</p>
+     * 与 {@link #registerIndustrialSteamHatch} 的 proven 写法一致。
+     * </p>
      *
-     * @param builder         原生 MachineBuilder（'custom' 分级 builder 的 definition 回调参数）
-     * @param overlayTexName  蒸汽外壳纹理名，如 steam_hatch（会拼成 block/machine/part/steam_hatch）
+     * @param builder        原生 MachineBuilder（'custom' 分级 builder 的 definition 回调参数）
+     * @param overlayTexName 蒸汽外壳纹理名，如 steam_hatch（会拼成 block/machine/part/steam_hatch）
      * @return 原 builder，可继续链式调用
      */
     public static MachineBuilder<?> overlaySteamHull(MachineBuilder<?> builder, String overlayTexName) {

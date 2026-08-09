@@ -2,7 +2,9 @@ package com.liangqu.gtuf.api.machine.feature;
 
 import com.gregtechceu.gtceu.api.recipe.GTRecipe;
 import com.gregtechceu.gtceu.api.recipe.GTRecipeType;
+
 import org.jetbrains.annotations.Nullable;
+
 import java.util.Locale;
 
 /**

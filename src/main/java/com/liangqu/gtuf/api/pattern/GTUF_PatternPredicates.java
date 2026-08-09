@@ -7,7 +7,9 @@ import com.gregtechceu.gtceu.api.pattern.TraceabilityPredicate;
 import com.gregtechceu.gtceu.api.pattern.error.PatternStringError;
 import com.gregtechceu.gtceu.common.data.GTBlocks;
 import com.gregtechceu.gtceu.common.data.GTMaterials;
+
 import com.lowdragmc.lowdraglib.utils.BlockInfo;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.Block;
 
@@ -17,13 +19,17 @@ import java.util.Map;
 /**
  * GTUF 自定义多方块结构检测谓词，模仿 {@link com.gregtechceu.gtceu.api.pattern.Predicates#heatingCoils()}。
  *
- * <p>检测外壳/框架方块并把对应等级写入 {@link com.gregtechceu.gtceu.api.pattern.util.PatternMatchContext}，
+ * <p>
+ * 检测外壳/框架方块并把对应等级写入 {@link com.gregtechceu.gtceu.api.pattern.util.PatternMatchContext}，
  * 机器在 {@code onStructureFormed()} 中通过 {@code getMultiblockState().getMatchContext()} 读取。
- * 同一结构内混用不同等级时设置错误信息使结构不匹配。</p>
+ * 同一结构内混用不同等级时设置错误信息使结构不匹配。
+ * </p>
  *
- * <p>每个等级体系使用独立的 MatchContext 键，因此同一结构内可同时使用蒸汽外壳
+ * <p>
+ * 每个等级体系使用独立的 MatchContext 键，因此同一结构内可同时使用蒸汽外壳
  * ({@link #STEAM_CASING_TIER_KEY}) 与通用外壳 ({@link #UNIVERSAL_CASING_TIER_KEY})、
- * 蒸汽框架 ({@link #STEAM_FRAME_TIER_KEY}) 与通用框架 ({@link #UNIVERSAL_FRAME_TIER_KEY}) 而互不干扰。</p>
+ * 蒸汽框架 ({@link #STEAM_FRAME_TIER_KEY}) 与通用框架 ({@link #UNIVERSAL_FRAME_TIER_KEY}) 而互不干扰。
+ * </p>
  */
 public final class GTUF_PatternPredicates {
 
@@ -33,7 +39,6 @@ public final class GTUF_PatternPredicates {
     public static final String UNIVERSAL_FRAME_TIER_KEY = "UniversalFrameType";
     public static final String UNIVERSAL_PIPE_TIER_KEY = "UniversalPipeType";
     public static final String UNIVERSAL_GEARBOX_TIER_KEY = "UniversalGearboxType";
-
 
     private GTUF_PatternPredicates() {}
 
@@ -98,6 +103,7 @@ public final class GTUF_PatternPredicates {
                 GTBlocks.CASING_TUNGSTENSTEEL_PIPE.get(), 4)),
                 UNIVERSAL_PIPE_TIER_KEY, "gtuf.multiblock.pattern.error.universal_pipe");
     }
+
     /**
      * 通用齿轮箱等级：青铜齿轮箱 → Tier 1，钢齿轮箱 → Tier 2，不锈钢齿轮箱 → Tier 3，，钛齿轮箱 → Tier 4，
      * 钨钢管道 → Tier 5。结果写入 {@link #UNIVERSAL_GEARBOX_TIER_KEY}。
@@ -106,19 +112,11 @@ public final class GTUF_PatternPredicates {
         return tierPredicate(new LinkedHashMap<>(Map.of(
                 GTBlocks.CASING_BRONZE_GEARBOX.get(), 1,
                 GTBlocks.CASING_STEEL_GEARBOX.get(), 2,
-                GTBlocks.CASING_STAINLESS_STEEL_GEARBOX.get(),3,
+                GTBlocks.CASING_STAINLESS_STEEL_GEARBOX.get(), 3,
                 GTBlocks.CASING_TITANIUM_GEARBOX.get(), 4,
                 GTBlocks.CASING_TUNGSTENSTEEL_GEARBOX.get(), 5)),
                 UNIVERSAL_GEARBOX_TIER_KEY, "gtuf.multiblock.pattern.error.universal_gearbox");
     }
-
-
-
-
-
-
-
-
 
     /**
      * 非空方块才写入映射（ChemicalHelper 对未知组合可能返回 null）。

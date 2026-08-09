@@ -1,8 +1,8 @@
 package com.liangqu.gtuf.common.machine.trait;
 
 import com.gregtechceu.gtceu.api.machine.feature.multiblock.IMultiController;
-import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
 
+import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.IdentityHashMap;
@@ -11,14 +11,18 @@ import java.util.Map;
 /**
  * 线程仓登记表：记录"装了线程仓的多方块控制器"与其线程仓部件。
  *
- * <p>Mixin 推广方案下，普通 GTM 电力多方块（不实现 {@code IThreadModifierMachine}）
+ * <p>
+ * Mixin 推广方案下，普通 GTM 电力多方块（不实现 {@code IThreadModifierMachine}）
  * 无法通过部件接口查询线程仓，因此由 {@link ThreadHatchPartMachine} 在
  * {@code addedToController} / {@code removedFromController} 时<b>无条件</b>向本表
  * 登记/注销。Mixin 与 {@link GTUFThreadingLogic} 通过控制器反查线程仓，从而获得
- * 当前配置的线程数。</p>
+ * 当前配置的线程数。
+ * </p>
  *
- * <p>仅服务端逻辑访问（结构成型/失效、机器 tick），单线程模型下无需加锁；
- * 用 {@link IdentityHashMap} 避免控制器对象 equals 语义干扰。</p>
+ * <p>
+ * 仅服务端逻辑访问（结构成型/失效、机器 tick），单线程模型下无需加锁；
+ * 用 {@link IdentityHashMap} 避免控制器对象 equals 语义干扰。
+ * </p>
  */
 public class GTUFThreadRegistry {
 
