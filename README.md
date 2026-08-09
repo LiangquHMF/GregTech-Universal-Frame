@@ -50,7 +50,6 @@ GTUF is a continuously updated mod.The code comes partly from other open-source 
 ## 📜 Credits
 
 * **Author**: LiangquHMF
-* **Textures & Assets**: Based on GTCEu and Community Assets.
 * **Inspiration**: GT Odyssey, GT Nexus Addon, GT Leisure.
 
 | Project                 | Author                                                          | License                                                               |
