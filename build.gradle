@@ -227,6 +227,19 @@ tasks.named('jar', Jar).configure {
     }
     finalizedBy 'reobfJar'}
 
+// 发布用源码 jar：与 mod jar 一起上传到 GitHub Release。
+// GitHub 会在每个 tag/Release 自动生成 "Source code (zip)" 与 "Source code (tar.gz)" 压缩包
+// （无需手动制作），本任务额外产出 *-sources.jar 供 IDE 调试 / 阅读源码（可选上传）。
+tasks.register('sourcesJar', Jar) {
+    archiveClassifier = 'sources'
+    from sourceSets.main.allJava
+}
+
+// `./gradlew build` 一并产出 mod jar（reobf 后）+ sources jar
+tasks.named('build') {
+    dependsOn 'sourcesJar'
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
     options.release.set(17)

@@ -115,5 +115,8 @@ gradle-app.setting
 run/
 runs/
 
+# GTM 参考源码（本地调试用，含 GPLv3 第三方源码，不得随项目推送）
+.gtuf_ref/
+
 # Avoid ignoring Gradle wrapper jar file (.jar files are usually ignored)
 !gradle-wrapper.jar
