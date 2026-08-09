@@ -82,4 +82,19 @@ public class EnhancedFluidHatchPartMachine extends FluidHatchPartMachine {
         }
         return true;
     }
+
+    /**
+     * 成型后允许控制器模型把本仓替换为结构外壳材质（来源 GTM 7.3.0
+     * {@code com.gregtechceu.gtceu.api.machine.multiblock.part.MultiblockPartMachine} 的同名方法）。
+     *
+     * <p>GTM 7.3.0 起该方法被 {@code GTMachineModelProperties.IS_FORMED} 渲染属性门控——
+     * 仅当部件模型注册了该属性且值为 true 时才替换。GTUF 仓室只注册了 RECIPE_LOGIC_STATUS，
+     * 未注册 IS_FORMED → {@code hasProperty(IS_FORMED)} 为 false → 成型后整体跳过替换，
+     * 保持注册时的仓室材质。这里改为按 {@link #isFormed()}（控制器位置表非空）判定；
+     * 7.1.4 无此门控（接口默认 true），{@code isFormed()} 与之行为等价且更精确。</p>
+     */
+    @Override
+    public boolean replacePartModelWhenFormed() {
+        return isFormed();
+    }
 }

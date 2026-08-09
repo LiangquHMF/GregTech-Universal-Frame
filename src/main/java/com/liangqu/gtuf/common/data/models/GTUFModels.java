@@ -32,6 +32,25 @@ public final class GTUFModels {
     }
 
     /**
+     * 可工作分级外壳模型 + 仓室可替换纹理（供线程仓/增强并行仓等"仓室"使用）。
+     *
+     * <p>与 {@link GTMachineModels#createWorkableTieredHullMachineModel} 相同的可工作分级
+     * 外壳模型，但额外把底座 bottom/top/side 注册为<b>可替换纹理</b>
+     * （{@code addReplaceableTextures("bottom","top","side")}）。GTM 的部件外观替换链路
+     * （{@code MachineModel#replacePartBaseModel} → {@code renderPartOverrides}）依赖
+     * replaceableTextures 生成 blank 覆盖表，把仓室自身 base quads 换成空白贴图后，再叠加
+     * 成型后的外壳 quads；缺它则 base 未清空，与外壳共面叠加（z-fight）产生材质闪烁。</p>
+     *
+     * <p>仓室类需配合各部件类 override 的
+     * {@code replacePartModelWhenFormed()}（按 {@code isFormed()} 判定）才能覆盖
+     * GTM 7.3.0 的 IS_FORMED 渲染属性门控，两版本行为一致。</p>
+     */
+    public static MachineBuilder.ModelInitializer createTieredHullMachineModel(ResourceLocation overlayDir) {
+        return GTMachineModels.createWorkableTieredHullMachineModel(overlayDir)
+                .andThen(builder -> builder.addReplaceableTextures("bottom", "top", "side"));
+    }
+
+    /**
      * 蒸汽机版 {@link #createTieredMachineModel} 的兼容别名（历史名称）。
      */
     public static MachineBuilder.ModelInitializer createTieredSteamMachineModel(

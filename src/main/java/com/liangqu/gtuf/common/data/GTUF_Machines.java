@@ -15,6 +15,7 @@ import com.gregtechceu.gtceu.common.machine.multiblock.part.SteamHatchPartMachin
 import com.gregtechceu.gtceu.utils.FormattingUtil;
 import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
+import com.liangqu.gtuf.common.data.models.GTUFModels;
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedFluidHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedParallelHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
@@ -148,7 +149,10 @@ public class GTUF_Machines {
                         .rotationState(RotationState.ALL)
                         .abilities(PartAbility.PARALLEL_HATCH)
                         .modelProperty(GTMachineModelProperties.RECIPE_LOGIC_STATUS, RecipeLogic.Status.IDLE)
-                        .model(GTMachineModels.createWorkableTieredHullMachineModel(
+                        // 用 GTUF 工厂：多注册 bottom/top/side 可替换纹理，成型后 blank 掉仓室自身
+                        // 材质避免与外壳 z-fight 闪烁（7.1.4），配合 replacePartModelWhenFormed 覆盖
+                        // 7.3.0 的 IS_FORMED 门控。
+                        .model(GTUFModels.createTieredHullMachineModel(
                                 GTCEu.id("block/machines/parallel_hatch_mk" + ((tier + 1) / 2))))
                         .tooltips(Component.translatable("gtuf.machine.enhanced_parallel_hatch.tooltip",
                                 EnhancedParallelHatchPartMachine.getParallelLimit(tier)))
@@ -212,7 +216,10 @@ public class GTUF_Machines {
                         .rotationState(RotationState.ALL)
                         .abilities(GTUF_PartAbility.THREAD_HATCH)
                         .modelProperty(GTMachineModelProperties.RECIPE_LOGIC_STATUS, RecipeLogic.Status.IDLE)
-                        .model(GTMachineModels.createWorkableTieredHullMachineModel(
+                        // 用 GTUF 工厂：多注册 bottom/top/side 可替换纹理，成型后 blank 掉仓室自身
+                        // 材质避免与外壳 z-fight 闪烁（7.1.4），配合 replacePartModelWhenFormed 覆盖
+                        // 7.3.0 的 IS_FORMED 门控。
+                        .model(GTUFModels.createTieredHullMachineModel(
                                 GTCEu.id("block/machines/parallel_hatch_mk4")))
                         .tooltips(Component.translatable("gtuf.machine.thread_hatch.tooltip",
                                 1 << (tier - GTValues.LuV)))
