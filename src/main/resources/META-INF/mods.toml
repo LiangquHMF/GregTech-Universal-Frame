@@ -8,6 +8,9 @@ displayName = "${mod_name}"
 displayURL = "${mod_url}"
 authors="${mod_author}"
 description = ''
+# mod 图标：icon.png 位于 jar 根目录（src/main/resources/icon.png）
+logoFile = "icon.png"
+logoBlur = false
 
 
 [[dependencies."${mod_id}"]]
@@ -25,7 +28,7 @@ side = "BOTH"
 [[dependencies."${mod_id}"]]
 modId = "gtceu"
 mandatory = true
-versionRange = "[${gtceu_version},)"
+versionRange = "${gtceu_version_range}"
 ordering = "AFTER"
 side = "BOTH"
 # Jade 为可选依赖：仅用于线程仓的线程信息提示显示；未装 Jade 时不影响核心功能。

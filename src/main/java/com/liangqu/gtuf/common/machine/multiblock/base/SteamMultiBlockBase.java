@@ -102,14 +102,6 @@ public class SteamMultiBlockBase extends WorkableMultiblockMachine
      * <p>注意覆盖 {@link #getPartAppearance(IMultiPart, Direction, BlockState, BlockPos)}
      * 时须保证客户端能拿到等级（子类应把等级字段标 {@code @Persisted @DescSynced @RequireRerender}）。</p>
      */
-    /**
-     * 结构外壳等级（青铜=1，脱氧钢=2）。默认 1。
-     *
-     * <p>{@link EnhanceableSteamMachine}/{@link IndustrialSteamMachine} 覆盖为结构成形时
-     * 从 MatchContext 读到的实际等级。客户端渲染（部件匹配外壳，见
-     * {@link com.liangqu.gtuf.client.renderer.machine.GTUFTieredPartRender}）需要此值，
-     * 子类等级字段须标 {@code @Persisted @DescSynced} 同步到客户端。</p>
-     */
     @Override
     public int getCasingTier() {
         return 1;
