@@ -3,10 +3,13 @@ package com.liangqu.gtuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.DistExecutor;
+import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 
 import com.liangqu.gtuf.client.ClientProxy;
 import com.liangqu.gtuf.common.CommonProxy;
+import com.liangqu.gtuf.config.GTUF_Config;
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
@@ -25,6 +28,8 @@ public class GTUF_Core {
     }
 
     public GTUF_Core() {
+        // 注册 GTUF 配置（COMMON 类型 → config/gtuf-common.toml），必须在任何配置读取前完成。
+        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, GTUF_Config.spec());
         DistExecutor.unsafeRunForDist(() -> ClientProxy::new, () -> CommonProxy::new);
         MinecraftForge.EVENT_BUS.register(this);
     }

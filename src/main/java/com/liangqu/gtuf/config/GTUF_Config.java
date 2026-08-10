@@ -1,6 +1,5 @@
 package com.liangqu.gtuf.config;
 
-import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -8,38 +7,49 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 
 import com.liangqu.gtuf.GTUF_Core;
 
-import java.util.Set;
-
-// An example config class. This is not required, but it's a good idea to have one to keep your config organized.
-// Demonstrates how to use Forge's config APIs
+/**
+ * GTUF 配置（config/gtuf-common.toml）。
+ *
+ * <p>
+ * 目前仅一个配方平衡项：并行能耗倍率。机器做并行放大时把 EUt 乘上并行数（能耗随并行线性增长、
+ * 单件蒸汽/EU 成本恒定），该倍率供整合包作者整体调节并行带来的能耗开销——
+ * 例如调低让并行更省汽、或设为 0 让并行不增耗能。
+ * </p>
+ */
 @Mod.EventBusSubscriber(modid = GTUF_Core.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
-public class GTUF_Config {
+public final class GTUF_Config {
 
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
-    private static final ForgeConfigSpec.BooleanValue LOG_DIRT_BLOCK = BUILDER
-            .comment("Whether to log the dirt block on common setup").define("logDirtBlock", true);
+    /** 并行能耗倍率：实际 EUt = 配方单次 EUt × 并行数 × 该倍率。默认 1.0（能耗随并行线性增长）。 */
+    private static final ForgeConfigSpec.DoubleValue PARALLEL_EUT_MULTIPLIER = BUILDER
+            .comment("并行能耗倍率（Parallel EUt Multiplier）",
+                    "实际 EUt = 配方单次 EUt × 并行数 × 该倍率。",
+                    "默认 1.0：能耗随并行数线性增长，单件蒸汽/EU 成本恒定，并行只换吞吐。",
+                    "设为 0.0 可让并行不增耗能（不推荐，等于免费并行）。")
+            .defineInRange("parallelEutMultiplier", 1.0, 0.0, Double.MAX_VALUE);
 
-    private static final ForgeConfigSpec.IntValue MAGIC_NUMBER = BUILDER.comment("A magic number")
-            .defineInRange("magicNumber", 42, 0, Integer.MAX_VALUE);
+    private static final ForgeConfigSpec SPEC = BUILDER.build();
 
-    public static final ForgeConfigSpec.ConfigValue<String> MAGIC_NUMBER_INTRODUCTION = BUILDER
-            .comment("What you want the introduction message to be for the magic number")
-            .define("magicNumberIntroduction", "The magic number is... ");
+    private static double parallelEutMultiplier = 1.0;
 
-    // a list of strings that are treated as resource locations for items
+    private GTUF_Config() {}
 
-    static final ForgeConfigSpec SPEC = BUILDER.build();
+    /** 当前并行能耗倍率（供配方处理逻辑读取）。 */
+    public static double getParallelEutMultiplier() {
+        return parallelEutMultiplier;
+    }
 
-    public static boolean logDirtBlock;
-    public static int magicNumber;
-    public static String magicNumberIntroduction;
-    public static Set<Item> items;
+    /** 配置规格，由 {@code GTUF_Core} 构造期注册。 */
+    public static ForgeConfigSpec spec() {
+        return SPEC;
+    }
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event) {
-        logDirtBlock = LOG_DIRT_BLOCK.get();
-        magicNumber = MAGIC_NUMBER.get();
-        magicNumberIntroduction = MAGIC_NUMBER_INTRODUCTION.get();
+        // ModConfigEvent 涵盖初次加载与运行中重载，两者都需刷新缓存值。
+        if (event.getConfig().getSpec() == SPEC) {
+            parallelEutMultiplier = PARALLEL_EUT_MULTIPLIER.get();
+        }
     }
 }

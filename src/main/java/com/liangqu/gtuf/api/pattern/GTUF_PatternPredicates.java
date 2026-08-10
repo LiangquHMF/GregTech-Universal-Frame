@@ -39,6 +39,7 @@ public final class GTUF_PatternPredicates {
     public static final String UNIVERSAL_FRAME_TIER_KEY = "UniversalFrameType";
     public static final String UNIVERSAL_PIPE_TIER_KEY = "UniversalPipeType";
     public static final String UNIVERSAL_GEARBOX_TIER_KEY = "UniversalGearboxType";
+    public static final String UNIVERSAL_FIREBOX_TIER_KEY = "UniversalFireboxType";
 
     private GTUF_PatternPredicates() {}
 
@@ -116,6 +117,18 @@ public final class GTUF_PatternPredicates {
                 GTBlocks.CASING_TITANIUM_GEARBOX.get(), 4,
                 GTBlocks.CASING_TUNGSTENSTEEL_GEARBOX.get(), 5)),
                 UNIVERSAL_GEARBOX_TIER_KEY, "gtuf.multiblock.pattern.error.universal_gearbox");
+    }
+    /**
+     * 通用燃烧室等级：青铜燃烧室 → Tier 1，钢燃烧室 → Tier 2，钛燃烧室 → Tier 3，，钨钢燃烧室 → Tier 4。
+     * 结果写入 {@link #UNIVERSAL_FIREBOX_TIER_KEY}。
+     */
+    public static TraceabilityPredicate UniversalFireboxTier() {
+        return tierPredicate(new LinkedHashMap<>(Map.of(
+                        GTBlocks.FIREBOX_BRONZE.get(), 1,
+                        GTBlocks.FIREBOX_STEEL.get(), 2,
+                        GTBlocks.FIREBOX_TITANIUM.get(), 3,
+                        GTBlocks.FIREBOX_TUNGSTENSTEEL.get(), 4)),
+                UNIVERSAL_FIREBOX_TIER_KEY, "gtuf.multiblock.pattern.error.universal_firebox");
     }
 
     /**

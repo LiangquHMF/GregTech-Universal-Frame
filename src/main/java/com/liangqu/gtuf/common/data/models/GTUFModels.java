@@ -1,10 +1,12 @@
 package com.liangqu.gtuf.common.data.models;
 
 import com.gregtechceu.gtceu.api.registry.registrate.MachineBuilder;
+import com.gregtechceu.gtceu.common.block.BoilerFireboxType;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 
 import net.minecraft.resources.ResourceLocation;
 
+import com.liangqu.gtuf.client.renderer.machine.GTUFTieredBoilerPartRender;
 import com.liangqu.gtuf.client.renderer.machine.GTUFTieredPartRender;
 
 /**
@@ -58,6 +60,32 @@ public final class GTUFModels {
     public static MachineBuilder.ModelInitializer createTieredHullMachineModel(ResourceLocation overlayDir) {
         return GTMachineModels.createWorkableTieredHullMachineModel(overlayDir)
                 .andThen(builder -> builder.addReplaceableTextures("bottom", "top", "side"));
+    }
+
+    /**
+     * 带燃烧室的等级外壳模型：用 {@link GTUFTieredBoilerPartRender}（而非
+     * {@link GTUFTieredPartRender}）替换部件渲染，单一 {@code IControllerModelRenderer}
+     * 合并"等级外壳 + 燃烧室行"两件事。
+     *
+     * <p>
+     * 适用于底部有燃烧室行的多方块机（如合金炉）：燃烧室行上的部件（蒸汽仓）渲染成
+     * 燃烧室方块、与相邻燃烧室无缝融合；控制器与其余仓室仍按外壳等级渲染成实际外壳方块。
+     * </p>
+     *
+     * <p>
+     * <b>不要在此之上再叠加任何 {@code IControllerModelRenderer}</b>（包括
+     * {@link #createTieredMachineModel} 的 {@link GTUFTieredPartRender} 或 GTM
+     * {@code BoilerMultiPartRender}）——GTM 的 {@code renderPartOverrides} 会把所有
+     * {@code IControllerModelRenderer} 的 quads 累积进同一个列表，两个渲染器叠加会让部件
+     * 重复渲染（连接缝/z-fighting），且模型 JSON 里 type 冲突。
+     * </p>
+     */
+    public static MachineBuilder.ModelInitializer createTieredBoilerMachineModel(
+                                                                                 ResourceLocation baseCasingTexture,
+                                                                                 ResourceLocation overlayDir,
+                                                                                 BoilerFireboxType fireboxType) {
+        return GTMachineModels.createWorkableCasingMachineModel(baseCasingTexture, overlayDir)
+                .andThen(builder -> builder.addDynamicRenderer(() -> new GTUFTieredBoilerPartRender(fireboxType)));
     }
 
     /**

@@ -26,6 +26,7 @@ import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
 import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
+import com.liangqu.gtuf.config.GTUF_Config;
 
 import java.util.Collections;
 import java.util.List;
@@ -177,9 +178,13 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
         int parallels = ParallelLogic.getParallelAmount(this, recipe, targetParallel);
         if (parallels == 0) return null;
 
-        // 并行放大配方。蒸汽机不加 eutMultiplier——EUt 由蒸汽处理器按 conversionRate 折算为蒸汽。
+        // 并行放大配方。实际 EUt = 配方单次 EUt × 并行数 × 能耗倍率（默认倍率 1.0：能耗随并行
+        // 线性增长、单件蒸汽成本恒定；倍率可在 config 整体调节）。EUt 由蒸汽处理器按
+        // conversionRate 折算为蒸汽。
+        double eutMultiplier = parallels * GTUF_Config.getParallelEutMultiplier();
         return ModifierFunction.builder()
                 .modifyAllContents(ContentModifier.multiplier(parallels))
+                .eutMultiplier(eutMultiplier)
                 .parallels(parallels)
                 .build()
                 .apply(recipe.copy());
