@@ -11,8 +11,12 @@ import com.gregtechceu.gtceu.common.data.GTMaterials;
 import com.lowdragmc.lowdraglib.utils.BlockInfo;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraftforge.registries.ForgeRegistries;
 
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -40,6 +44,9 @@ public final class GTUF_PatternPredicates {
     public static final String UNIVERSAL_PIPE_TIER_KEY = "UniversalPipeType";
     public static final String UNIVERSAL_GEARBOX_TIER_KEY = "UniversalGearboxType";
     public static final String UNIVERSAL_FIREBOX_TIER_KEY = "UniversalFireboxType";
+
+    /** 结构实际使用的外壳方块注册名（由 {@link #Casing} 谓词写入 MatchContext）。 */
+    public static final String STRUCTURE_CASING_KEY = "StructureCasing";
 
     private GTUF_PatternPredicates() {}
 
@@ -118,17 +125,62 @@ public final class GTUF_PatternPredicates {
                 GTBlocks.CASING_TUNGSTENSTEEL_GEARBOX.get(), 5)),
                 UNIVERSAL_GEARBOX_TIER_KEY, "gtuf.multiblock.pattern.error.universal_gearbox");
     }
+
     /**
      * 通用燃烧室等级：青铜燃烧室 → Tier 1，钢燃烧室 → Tier 2，钛燃烧室 → Tier 3，，钨钢燃烧室 → Tier 4。
      * 结果写入 {@link #UNIVERSAL_FIREBOX_TIER_KEY}。
      */
     public static TraceabilityPredicate UniversalFireboxTier() {
         return tierPredicate(new LinkedHashMap<>(Map.of(
-                        GTBlocks.FIREBOX_BRONZE.get(), 1,
-                        GTBlocks.FIREBOX_STEEL.get(), 2,
-                        GTBlocks.FIREBOX_TITANIUM.get(), 3,
-                        GTBlocks.FIREBOX_TUNGSTENSTEEL.get(), 4)),
+                GTBlocks.FIREBOX_BRONZE.get(), 1,
+                GTBlocks.FIREBOX_STEEL.get(), 2,
+                GTBlocks.FIREBOX_TITANIUM.get(), 3,
+                GTBlocks.FIREBOX_TUNGSTENSTEEL.get(), 4)),
                 UNIVERSAL_FIREBOX_TIER_KEY, "gtuf.multiblock.pattern.error.universal_firebox");
+    }
+
+    /**
+     * 结构外壳方块谓词：匹配指定方块并把<b>实际匹配到的方块注册名</b>写入
+     * {@link #STRUCTURE_CASING_KEY}，机器在 {@code onStructureFormed()} 读取后作为
+     * 控制器/仓室的渲染外壳——结构铺什么方块，部件就渲染成什么方块（不依赖
+     * {@code appearanceBlock} 或等级映射，支持任意方块、任意部件类型）。
+     *
+     * <p>
+     * 与等级谓词不同，本谓词不做混用报错：同一结构允许出现多个候选方块，
+     * 以末次匹配为准（结构主体外壳应放在匹配顺序靠后的位置）。适合 KJS 直接把
+     * 结构方块注册名传给本谓词的场景，例如
+     * {@code GTUFPatternPredicates.Casing('gtceu:bronze_brick_casing')}。
+     * </p>
+     *
+     * <p>
+     * <b>只提供 String 变参这一种重载</b>：若再加 {@code Casing(Block...)}，
+     * KubeJS/Rhino 对单个字符串参数判定 {@code String[]} 与 {@code Block[]}
+     * 歧义（ambiguous），会在机器组装与 JEI 预览注册时抛异常，导致整机失效且
+     * GT 全部 JEI 内容消失。Java 侧需要时请先解析成注册名字符串再传入。
+     * </p>
+     *
+     * @param blockIds 允许的结构外壳方块注册名（形如 {@code "gtceu:bronze_brick_casing"}）
+     */
+    public static TraceabilityPredicate Casing(String... blockIds) {
+        return new TraceabilityPredicate(blockWorldState -> {
+            var blockState = blockWorldState.getBlockState();
+            var blockId = ForgeRegistries.BLOCKS.getKey(blockState.getBlock()).toString();
+            for (String id : blockIds) {
+                if (id.equals(blockId)) {
+                    blockWorldState.getMatchContext().set(STRUCTURE_CASING_KEY, id);
+                    return true;
+                }
+            }
+            return false;
+        }, () -> Arrays.stream(blockIds)
+                .map(id -> {
+                    ResourceLocation rl = ResourceLocation.tryParse(id);
+                    Block block = rl == null ? null : ForgeRegistries.BLOCKS.getValue(rl);
+                    return block == null ? BlockInfo.fromBlockState(Blocks.AIR.defaultBlockState()) :
+                            BlockInfo.fromBlockState(block.defaultBlockState());
+                })
+                .toArray(BlockInfo[]::new))
+                .addTooltips(Component.translatable("gtuf.multiblock.pattern.error.casing"));
     }
 
     /**

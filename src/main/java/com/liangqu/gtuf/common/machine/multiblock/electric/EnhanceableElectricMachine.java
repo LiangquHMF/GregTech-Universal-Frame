@@ -2,7 +2,6 @@ package com.liangqu.gtuf.common.machine.multiblock.electric;
 
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity;
 import com.gregtechceu.gtceu.api.machine.MetaMachine;
-import com.gregtechceu.gtceu.api.machine.feature.multiblock.IMultiPart;
 import com.gregtechceu.gtceu.api.machine.multiblock.WorkableElectricMultiblockMachine;
 import com.gregtechceu.gtceu.api.recipe.GTRecipe;
 import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
@@ -20,10 +19,12 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
 import com.liangqu.gtuf.api.machine.ITieredCasingMachine;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
+import com.liangqu.gtuf.config.GTUF_Config;
 
 import java.util.List;
 
@@ -33,15 +34,19 @@ import javax.annotation.Nullable;
  * 可增强电力多方块机器：由结构方块类型驱动三种机制，外壳必用，框架/管道可选。
  * <ul>
  * <li><b>外壳等级 (UniversalCasing)</b>：钢=1、铝=2、不锈钢=3、钛=4、钨钢=5，
- * 决定最大并行数 = 初始并行数 × 2^(外壳等级-1)（初始并行数默认 4：钢=4、铝=8、不锈钢=16）</li>
+ * 决定最大并行数 = 初始并行数 × 并行倍率^(外壳等级-1)（并行倍率由 config 控制，默认 2：
+ * 初始并行数默认 4 → 钢=4、铝=8、不锈钢=16）</li>
  * <li><b>框架等级 (UniversalFrame)</b>（构造器 useFrame=true 时启用）：钢=1、铝=2、不锈钢=3…
- * 决定能耗倍率 = 1 - (框架等级-1) × 0.05（钢=100%、铝=95%、不锈钢=90%）</li>
+ * 决定能耗倍率 = 1 - (框架等级-1) × 框架能耗步长（config 控制，默认 0.05：
+ * 钢=100%、铝=95%、不锈钢=90%）</li>
  * <li><b>管道等级 (UniversalPipe)</b>（构造器 usePipe=true 时启用）：青铜=1、钢=2、钛=3、钨钢=4…
- * 决定配方时长倍率 = 1 - (管道等级-1) × 0.1（青铜=1、钢=0.9、钛=0.7、钨钢=0.6）</li>
+ * 决定配方时长倍率 = 1 - (管道等级-1) × 管道时长步长（config 控制，默认 0.1：
+ * 青铜=1、钢=0.9、钛=0.7、钨钢=0.6）</li>
  * </ul>
  * 等级在结构成形时从 {@link com.gregtechceu.gtceu.api.pattern.util.PatternMatchContext} 读取。
- * 外壳等级需持久化并同步客户端：控制器自身与仓室按
- * {@link ITieredCasingMachine#getCasingState()} 渲染成结构实际使用的外壳方块。
+ * 外壳等级需持久化并同步客户端：仓室按
+ * {@link ITieredCasingMachine#getCasingState()} 渲染成结构实际使用的外壳方块，
+ * 控制器自身显示注册外观（{@link ITieredCasingMachine#getControllerAppearanceState()}）。
  *
  * <p>
  * 注册时挂载 {@code .recipeModifier(EnhanceableElectricMachine::recipeModifier, true)}，
@@ -71,6 +76,29 @@ public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachin
     @Persisted
     @DescSynced
     private int pipeTier = 1;
+
+    /**
+     * 结构实际使用的外壳方块注册名（由 {@link GTUF_PatternPredicates#Casing} 写入
+     * MatchContext、成型时读取）。仓室/总线部件按它渲染外壳——结构铺什么方块，
+     * 部件就渲染成什么方块；控制器自身显示注册外观（{@code appearanceBlock}）不受影响；
+     * 未设置（null）时仓室回退等级映射。
+     */
+    @Persisted
+    @DescSynced
+    @RequireRerender
+    @Nullable
+    private String structureCasingId = null;
+
+    @Nullable
+    @Override
+    public String getStructureCasingId() {
+        return structureCasingId;
+    }
+
+    @Override
+    public void setStructureCasingId(@Nullable String structureCasingId) {
+        this.structureCasingId = structureCasingId;
+    }
 
     private final int baseParallel;
     private final boolean useFrame;
@@ -121,6 +149,8 @@ public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachin
         if (usePipe && ctx.get(GTUF_PatternPredicates.UNIVERSAL_PIPE_TIER_KEY) instanceof Integer tier) {
             pipeTier = tier;
         }
+        // 读取结构实际使用的外壳方块（Casing 谓词写入），供仓室渲染匹配。
+        readStructureCasing();
     }
 
     @Override
@@ -129,6 +159,7 @@ public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachin
         casingTier = 1;
         frameTier = 1;
         pipeTier = 1;
+        resetStructureCasing();
     }
 
     //////////////////////////////////////
@@ -157,15 +188,23 @@ public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachin
     }
 
     /**
-     * 成型后部件外观 = 结构实际使用的外壳（邻居 CTM / 面剔除无缝，与蒸汽机一致）。
+     * 成型后控制器外观 = 注册时指定的外观方块（{@link #getControllerAppearanceState()}），
+     * 与仓室跟随的结构外壳（{@link #getCasingState()}）分离。
+     *
+     * <p>
+     * 本机器是等级外壳机器（无 Casing 谓词），{@code getControllerAppearanceState()} 恒为 null，
+     * 回退 {@link #getCasingState()}——控制器渲染成结构外壳等级方块、相邻面剔除按外壳材质处理。
+     * </p>
      */
     @Override
-    public BlockState getPartAppearance(IMultiPart part, Direction side, BlockState sourceState, BlockPos sourcePos) {
+    public BlockState getBlockAppearance(BlockState state, BlockAndTintGetter level, BlockPos pos, Direction side,
+                                         BlockState sourceState, BlockPos sourcePos) {
         if (isFormed()) {
-            BlockState casing = getCasingState();
-            if (casing != null) return casing;
+            BlockState appearance = getControllerAppearanceState();
+            if (appearance == null) appearance = getCasingState();
+            if (appearance != null) return appearance;
         }
-        return super.getPartAppearance(part, side, sourceState, sourcePos);
+        return super.getBlockAppearance(state, level, pos, side, sourceState, sourcePos);
     }
 
     //////////////////////////////////////
@@ -173,11 +212,12 @@ public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachin
     //////////////////////////////////////
 
     /**
-     * 最大并行数 = 初始并行数 × 2^(外壳等级-1)。
+     * 最大并行数 = 初始并行数 × 并行倍率^(外壳等级-1)。
+     * 并行倍率由 {@link GTUF_Config#getElectricParallelBase()} 控制（默认 2）。
      * 初始并行数 4 时：钢(1)=4、铝(2)=8、不锈钢(3)=16、钛(4)=32、钨钢(5)=64。
      */
     public int getMaxParallel() {
-        return baseParallel * (int) Math.pow(2, casingTier - 1);
+        return baseParallel * (int) Math.pow(GTUF_Config.getElectricParallelBase(), casingTier - 1);
     }
 
     /** 是否启用框架（能耗）增强。 */
@@ -191,19 +231,21 @@ public class EnhanceableElectricMachine extends WorkableElectricMultiblockMachin
     }
 
     /**
-     * 能耗倍率：1 - (框架等级-1) × 0.05。钢(1)=100%、铝(2)=95%、不锈钢(3)=90%。
-     * 如需修改公式直接覆盖本方法。
+     * 能耗倍率：1 - (框架等级-1) × 框架能耗步长（下限 0，避免高等级配大步长出现负倍率）。
+     * 步长由 {@link GTUF_Config#getElectricFrameEnergyStep()} 控制（默认 0.05）。
+     * 钢(1)=100%、铝(2)=95%、不锈钢(3)=90%。如需修改公式直接覆盖本方法。
      */
     public double getEnergyMultiplier() {
-        return 1.0 - (frameTier - 1) * 0.05;
+        return Math.max(0.0, 1.0 - (frameTier - 1) * GTUF_Config.getElectricFrameEnergyStep());
     }
 
     /**
-     * 配方时长倍率：1 - (管道等级-1) × 0.1。青铜(1)=1、钢(2)=0.9、钛(3)=0.7、钨钢(4)=0.6。
-     * 如需修改公式直接覆盖本方法。
+     * 配方时长倍率：1 - (管道等级-1) × 管道时长步长（下限 0，避免高等级配大步长出现负倍率）。
+     * 步长由 {@link GTUF_Config#getElectricPipeSpeedStep()} 控制（默认 0.1）。
+     * 青铜(1)=100%、钢(2)=90%、钛(3)=70%、钨钢(4)=60%。如需修改公式直接覆盖本方法。
      */
     public double getSpeedMultiplier() {
-        return 1.0 - (pipeTier - 1) * 0.1;
+        return Math.max(0.0, 1.0 - (pipeTier - 1) * GTUF_Config.getElectricPipeSpeedStep());
     }
 
     //////////////////////////////////////

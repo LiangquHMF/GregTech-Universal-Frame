@@ -6,7 +6,6 @@ import com.gregtechceu.gtceu.api.gui.GuiTextures;
 import com.gregtechceu.gtceu.api.gui.UITemplate;
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity;
 import com.gregtechceu.gtceu.api.machine.feature.multiblock.IDisplayUIMachine;
-import com.gregtechceu.gtceu.api.machine.feature.multiblock.IMultiPart;
 import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility;
 import com.gregtechceu.gtceu.api.machine.multiblock.WorkableMultiblockMachine;
 import com.gregtechceu.gtceu.api.machine.steam.SteamEnergyRecipeHandler;
@@ -21,6 +20,9 @@ import com.lowdragmc.lowdraglib.gui.util.ClickData;
 import com.lowdragmc.lowdraglib.gui.widget.ComponentPanelWidget;
 import com.lowdragmc.lowdraglib.gui.widget.DraggableScrollableWidgetGroup;
 import com.lowdragmc.lowdraglib.gui.widget.LabelWidget;
+import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
+import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
+import com.lowdragmc.lowdraglib.syncdata.annotation.RequireRerender;
 import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
 
 import net.minecraft.ChatFormatting;
@@ -29,10 +31,12 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
 import com.liangqu.gtuf.api.machine.ITieredCasingMachine;
 import com.liangqu.gtuf.api.machine.feature.IPatternBufferModeHost;
+import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 
 import java.util.List;
 
@@ -48,6 +52,29 @@ public class SteamMultiBlockBase extends WorkableMultiblockMachine
 
     @Nullable
     protected SteamEnergyRecipeHandler steamEnergy = null;
+
+    /**
+     * 结构实际使用的外壳方块注册名（由 {@link GTUF_PatternPredicates#Casing} 写入
+     * MatchContext、成型时读取）。仓室/总线部件按它渲染外壳——结构铺什么方块，
+     * 部件就渲染成什么方块；控制器自身显示注册外观（{@code appearanceBlock}）不受影响；
+     * 未设置（null）时仓室回退等级映射/注册外观。
+     */
+    @Persisted
+    @DescSynced
+    @RequireRerender
+    @Nullable
+    private String structureCasingId = null;
+
+    @Nullable
+    @Override
+    public String getStructureCasingId() {
+        return structureCasingId;
+    }
+
+    @Override
+    public void setStructureCasingId(@Nullable String structureCasingId) {
+        this.structureCasingId = structureCasingId;
+    }
 
     public SteamMultiBlockBase(IMachineBlockEntity holder, boolean isSteel, Object... args) {
         super(holder, args);
@@ -66,6 +93,8 @@ public class SteamMultiBlockBase extends WorkableMultiblockMachine
     @Override
     public void onStructureFormed() {
         super.onStructureFormed();
+        // 读取结构实际使用的外壳方块（Casing 谓词写入），供仓室渲染匹配。
+        readStructureCasing();
         for (var part : getParts()) {
             if (!PartAbility.STEAM.isApplicable(part.self().getDefinition().getBlock())) continue;
             var handlers = part.getRecipeHandlers();
@@ -90,6 +119,7 @@ public class SteamMultiBlockBase extends WorkableMultiblockMachine
     public void onStructureInvalid() {
         super.onStructureInvalid();
         this.steamEnergy = null;
+        resetStructureCasing();
     }
 
     //////////////////////////////////////
@@ -97,23 +127,14 @@ public class SteamMultiBlockBase extends WorkableMultiblockMachine
     //////////////////////////////////////
 
     /**
-     * 成型后部件（仓/总线）渲染成被替换外壳的材质。
-     *
-     * <p>
-     * GTM 默认部件外观固定等于注册时 {@code appearanceBlock}（{@code partAppearance}
-     * 默认返回 {@code definition.getAppearance().get()}），无法随结构<b>实际使用</b>的外壳变化。
-     * 等级机器（青铜/脱氧钢外壳二选一）应覆盖此方法返回对应外壳的方块状态；
-     * 返回 null 则沿用默认行为（不参与外观覆盖）。
-     * </p>
-     *
-     * <p>
-     * 注意覆盖 {@link #getPartAppearance(IMultiPart, Direction, BlockState, BlockPos)}
-     * 时须保证客户端能拿到等级（子类应把等级字段标 {@code @Persisted @DescSynced @RequireRerender}）。
-     * </p>
+     * 基类默认返回 <b>0（未解析）</b>：结构未使用等级外壳系统的机器（例如 KJS 直接以
+     * {@code appearanceBlock} 指定机壳材质、结构铺普通机壳方块）应让仓室回退到注册外观
+     * （控制器自身即显示注册外观），从而与结构真实使用的机壳一致。子类若由结构等级驱动
+     * （如 {@code EnhanceableSteamMachine} 从 MatchContext 读取等级）须覆盖本方法。
      */
     @Override
     public int getCasingTier() {
-        return 1;
+        return 0;
     }
 
     /**
@@ -122,26 +143,44 @@ public class SteamMultiBlockBase extends WorkableMultiblockMachine
      * 实现 {@link ITieredCasingMachine} 接口，供渲染器（控制器自身 + 仓室/总线）
      * 按结构实际使用的外壳匹配材质。
      * </p>
+     * <p>
+     * 等级 {@code <= 0}（未解析）时回退注册外观方块（{@code appearanceBlock}），
+     * 例如 KJS 机器结构铺 {@code bronze_machine_casing} 且外观同为该方块时，
+     * 仓室/控制器材质与结构一致。
+     * </p>
      */
     @Nullable
     @Override
     public BlockState getCasingState(int tier) {
+        if (tier <= 0) {
+            // 未解析等级：回退注册外观方块（appearanceBlock）。
+            var appearance = getDefinition().getAppearance();
+            return appearance == null ? null : appearance.get();
+        }
         return tier >= 2 ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState() :
                 GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
     }
 
-    @Nullable
-    protected BlockState getPartAppearanceState() {
-        return null;
-    }
-
+    /**
+     * 成型后控制器的外观 = 注册时指定的外观方块（{@link #getControllerAppearanceState()}），
+     * 与仓室跟随的结构外壳（{@link #getCasingState()}）分离。
+     *
+     * <p>
+     * 控制器方块显示注册的 {@code appearanceBlock}，不被结构 Casing 覆盖；
+     * 等级外壳机器（{@code getControllerAppearanceState()} 返回 null）回退
+     * {@link #getCasingState()}——相邻方块的面剔除按结构外壳材质处理。
+     * 未显式设置外观（默认即机器方块自身）时沿用基类默认行为。
+     * </p>
+     */
     @Override
-    public BlockState getPartAppearance(IMultiPart part, Direction side, BlockState sourceState, BlockPos sourcePos) {
+    public BlockState getBlockAppearance(BlockState state, BlockAndTintGetter level, BlockPos pos, Direction side,
+                                         BlockState sourceState, BlockPos sourcePos) {
         if (isFormed()) {
-            BlockState state = getPartAppearanceState();
-            if (state != null) return state;
+            BlockState appearance = getControllerAppearanceState();
+            if (appearance == null) appearance = getCasingState();
+            if (appearance != null) return appearance;
         }
-        return super.getPartAppearance(part, side, sourceState, sourcePos);
+        return super.getBlockAppearance(state, level, pos, side, sourceState, sourcePos);
     }
 
     public IGuiTexture getScreenTexture() {

@@ -109,7 +109,7 @@ public class ConfigurableElectricParallelMachine extends WorkableElectricMultibl
     }
 
     private int adjust(int current, boolean increase) {
-        int newValue = increase ? current + 1 : current - 1;
+        int newValue = increase ? current * 2 : current / 2;
         return Math.max(MIN_PARALLEL, Math.min(newValue, maxParallel));
     }
 }

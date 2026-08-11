@@ -17,16 +17,38 @@ import java.util.List;
 
 public class TierElectricParallelMachine extends WorkableElectricMultiblockMachine {
 
+    /** 默认并行倍率 = 2（历史行为：最大并行数 = 2 × 最大电压等级）。 */
+    public static final int DEFAULT_PARALLEL_MULTIPLIER = 2;
+
+    /** 并行倍率：最大并行数 = 倍率 × 最大电压等级。KubeJS 注册时经构造器传入。 */
+    private final int parallelMultiplier;
+
+    /**
+     * 默认构造：倍率取 {@link #DEFAULT_PARALLEL_MULTIPLIER}。
+     * 供 testmod 的 {@code TierElectricParallelMachine::new} 等方法引用使用。
+     */
     public TierElectricParallelMachine(IMachineBlockEntity holder, Object... args) {
-        super(holder, args);
+        this(holder, DEFAULT_PARALLEL_MULTIPLIER, args);
     }
 
     /**
-     * 最大并行数 = 2 × 最大电压等级。LV(1)=2, MV(2)=4, HV(3)=6, EV(4)=8, IV(5)=10……
+     * KubeJS 注册多方块结构时指定初始并行倍率（{@code Builder(holder, 倍率)}）：
+     * {@code .machine((holder) => new TierElectricParallelMachine(holder, 倍率))}。
+     *
+     * @param parallelMultiplier 并行倍率（最大并行数 = 倍率 × 最大电压等级），下限 1
+     */
+    public TierElectricParallelMachine(IMachineBlockEntity holder, int parallelMultiplier, Object... args) {
+        super(holder, args);
+        this.parallelMultiplier = Math.max(1, parallelMultiplier);
+    }
+
+    /**
+     * 最大并行数 = 倍率 × 最大电压等级。倍率由构造器传入（KubeJS 注册时指定），默认 2。
+     * LV(1)=2, MV(2)=4, HV(3)=6, EV(4)=8, IV(5)=10……（倍率=2 时）。
      */
     public int getMaxParallel() {
         int tier = GTUtil.getTierByVoltage(getMaxVoltage());
-        return Math.max(1, 2 * tier);
+        return Math.max(1, parallelMultiplier * tier);
     }
 
     /**

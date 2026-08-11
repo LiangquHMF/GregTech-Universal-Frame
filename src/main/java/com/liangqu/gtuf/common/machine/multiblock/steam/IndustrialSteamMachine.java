@@ -9,7 +9,6 @@ import com.gregtechceu.gtceu.api.recipe.RecipeHelper;
 import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
-import com.gregtechceu.gtceu.common.data.GTBlocks;
 
 import com.lowdragmc.lowdraglib.gui.util.ClickData;
 import com.lowdragmc.lowdraglib.gui.widget.ComponentPanelWidget;
@@ -20,7 +19,6 @@ import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.block.state.BlockState;
 
 import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
@@ -103,16 +101,6 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
         return casingTier;
     }
 
-    /**
-     * 部件外观 = 结构实际使用的外壳：Tier1 青铜机壳（steam_machine_casing），
-     * Tier2 脱氧钢机壳（solid_machine_casing）。这样成型后仓/总线材质与被替换外壳一致。
-     */
-    @Override
-    protected BlockState getPartAppearanceState() {
-        return getCasingTier() >= 2 ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState() :
-                GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
-    }
-
     //////////////////////////////////////
     // *** Multiblock LifeCycle ***//
     //////////////////////////////////////
@@ -122,7 +110,7 @@ public class IndustrialSteamMachine extends SteamMultiBlockBase implements Paral
         detectOC();
         // 先检测增强仓再调用 super：super 内按 getConversionRate() 动态分派创建蒸汽处理器
         super.onStructureFormed();
-        // 从 MatchContext 读取外壳等级（客户端渲染需同步，见 getPartAppearanceState）
+        // 从 MatchContext 读取外壳等级（客户端渲染需同步：仓室外观按此匹配外壳）
         var ctx = getMultiblockState().getMatchContext();
         if (ctx.get(GTUF_PatternPredicates.STEAM_CASING_TIER_KEY) instanceof Integer tier) casingTier = tier;
     }

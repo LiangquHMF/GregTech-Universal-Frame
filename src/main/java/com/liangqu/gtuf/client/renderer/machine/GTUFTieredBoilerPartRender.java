@@ -10,6 +10,7 @@ import com.gregtechceu.gtceu.api.pattern.util.RelativeDirection;
 import com.gregtechceu.gtceu.client.model.machine.IControllerModelRenderer;
 import com.gregtechceu.gtceu.client.renderer.machine.DynamicRender;
 import com.gregtechceu.gtceu.client.renderer.machine.DynamicRenderType;
+import com.gregtechceu.gtceu.client.util.GTQuadTransformers;
 import com.gregtechceu.gtceu.client.util.ModelUtils;
 import com.gregtechceu.gtceu.common.block.BoilerFireboxType;
 import com.gregtechceu.gtceu.common.data.GTBlocks;
@@ -35,6 +36,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -55,9 +57,11 @@ import java.util.Map;
  * <li><b>燃烧室行部件</b>（位于控制器正下方那一行，仿大锅炉判定）：渲染成燃烧室方块
  * （{@code firebox_active} / {@code firebox_idle} 两态，工作/闲置切换），方块自身的连接纹理
  * 会让蒸汽仓与相邻燃烧室无缝融合；</li>
- * <li><b>其余部件</b>：渲染成 {@link ITieredCasingMachine#getCasingState()} 返回的实际外壳方块
- * （青铜/脱氧钢随外壳等级匹配）；</li>
- * <li><b>控制器自身</b>（{@link #getRenderQuads}）：成型后追加外壳立方体 quads。</li>
+ * <li><b>其余部件</b>：渲染成 {@link ITieredCasingMachine#getCasingState()} 返回的结构实际
+ * 外壳方块（青铜/脱氧钢随外壳等级匹配）；</li>
+ * <li><b>控制器自身</b>（{@link #getRenderQuads}）：成型后追加注册外观方块
+ * （{@code appearanceBlock}，{@link ITieredCasingMachine#getControllerAppearanceState()}）
+ * 立方体 quads，不被结构外壳覆盖；外观材质与 base 一致时整体跳过（避免 z-fight 遮 overlay）。</li>
  * </ul>
  *
  * <p>
@@ -126,11 +130,17 @@ public class GTUFTieredBoilerPartRender extends DynamicRender<MetaMachine, GTUFT
     }
 
     /**
-     * 控制器自身渲染：成型后追加 {@link ITieredCasingMachine#getCasingState()} 返回的外壳
-     * 立方体 quads，盖住 base 模型注册时写死的立方体材质（overlay 凸出 0.002 仍保留）。
+     * 控制器自身渲染：成型后追加外观方块立方体 quads，盖住 base 模型注册时写死的立方体材质。
+     * 外观来源优先级：{@link ITieredCasingMachine#getControllerAppearanceState()}
+     * （Casing 谓词机器 = 注册外观方块）→ 回退 {@link ITieredCasingMachine#getCasingState()}
+     * （等级外壳机器 = 结构外壳等级方块）。
      * <p>
      * 部件（{@link IMultiPart}）不走此路径——它们的 base 由 {@link #renderPartModel} 替换；
-     * 未成型或未实现接口的控制器返回空（显示注册时的 workable base 模型）。
+     * 未成型、未实现接口的控制器返回空（显示注册时的 workable base 模型）。
+     * 控制器朝向面（overlay 所在的正面）无条件由 base 模型直接渲染材质 + overlay：外观立方体
+     * 在正面必然与凸出的 overlay（±0.01）深度竞争，远处深度缓冲精度不足会 z-fighting 并被
+     * 后画的外观立方体赢走，遮挡 overlay（overlay 消失根因）。非正面外观材质与 base 材质一致
+     * （{@link #matchesBaseMaterial}）时外观立方体完全冗余，整体跳过；不一致时渲染以盖住 base。
      * </p>
      */
     @Override
@@ -142,12 +152,64 @@ public class GTUFTieredBoilerPartRender extends DynamicRender<MetaMachine, GTUFT
         if (machine instanceof IMultiPart) return Collections.emptyList();
         if (!(machine instanceof ITieredCasingMachine tiered) || !tiered.isFormed()) return Collections.emptyList();
         if (level == null || pos == null) return Collections.emptyList();
-        BlockState casing = tiered.getCasingState();
-        if (casing == null) return Collections.emptyList();
-        BakedModel model = getModel(casing);
+        // 正面（overlay 所在的机器朝向面）：无条件由 base 模型直接渲染材质 + overlay。
+        // 外观立方体在正面必然与凸出的 overlay（±0.01）深度竞争，远处（约 4+ blocks）
+        // 24 位深度缓冲精度不足 → z-fighting → 后画的外观立方体赢 → 遮挡 overlay
+        // （overlay 消失根因）。因此正面一律跳过，保证 overlay 永远可见；正面 base 材质与
+        // 其余面外观材质不一致是结构性权衡（正面含 overlay 显示层，GT 机器普遍如此）。
+        if (side == machine.getFrontFacing()) return Collections.emptyList();
+        BlockState appearance = tiered.getControllerAppearanceState();
+        // 等级外壳/可替换外壳机器（structureCasingId 为 null，getControllerAppearanceState 返回 null）
+        // 控制器跟随结构外壳（getCasingState()）；Casing 谓词机器仍显示注册外观方块。
+        if (appearance == null) appearance = tiered.getCasingState();
+        if (appearance == null) return Collections.emptyList();
+        BakedModel model = getModel(appearance);
         if (model == null) return Collections.emptyList();
-        modelData = model.getModelData(level, pos, casing, modelData);
-        return model.getQuads(casing, side, rand, modelData, renderType);
+        modelData = model.getModelData(level, pos, appearance, modelData);
+        List<BakedQuad> quads = model.getQuads(appearance, side, rand, modelData, renderType);
+        if (quads.isEmpty()) return Collections.emptyList();
+        // 外观材质与 base 材质一致时外观立方体完全冗余（base 已渲染同材质 + overlay）：整体跳过，
+        // 避免外观立方体（外扩 0.005）与 overlay（凸出 0.01）深度间隙仅 0.005，在远处 z-fighting
+        // 遮挡 overlay（控制器 overlay 消失的根因）。不一致时仍需立方体覆盖 base。
+        if (matchesBaseMaterial(quads, machine.self().getBlockState(), side, rand, renderType)) {
+            return Collections.emptyList();
+        }
+        // 同 GTUFTieredPartRender：复制后沿各面法线外扩 0.005，盖住 base 立方体（[0,16]）
+        // 而留在 workable overlay（±0.01）之后，避免共面 z-fight 闪烁。原 quad 不可直接改。
+        List<BakedQuad> result = new ArrayList<>(quads.size());
+        for (BakedQuad quad : quads) {
+            result.add(GTQuadTransformers.copy(quad));
+        }
+        GTQuadTransformers.offset(0.005f).processInPlace(result);
+        return result;
+    }
+
+    /**
+     * 外观立方体 quads 与机器 base 模型 quads 是否使用相同材质（一致时外观立方体冗余，应整体跳过）。
+     * <p>
+     * 仅对非正面调用（正面由 {@link #getRenderQuads} 无条件跳过）。用 {@link ModelData#EMPTY}
+     * 取机器 base 模型 quads：modelData 无 LEVEL/POS 时 {@code MachineModel.renderMachine}
+     * 走 machine=null 分支，不触发动态渲染器（本渲染器 getRenderQuads 对 null machine 返回空），
+     * 不会递归。逐贴图比对。
+     * </p>
+     */
+    @OnlyIn(Dist.CLIENT)
+    private static boolean matchesBaseMaterial(List<BakedQuad> appearanceQuads, BlockState machineState,
+                                               @Nullable Direction side, RandomSource rand,
+                                               @Nullable RenderType renderType) {
+        BakedModel baseModel = ModelUtils.getModelForState(machineState);
+        if (baseModel == null) return false;
+        var baseQuads = baseModel.getQuads(machineState, side, rand, ModelData.EMPTY, renderType);
+        for (var aq : appearanceQuads) {
+            var as = aq.getSprite();
+            if (as == null) continue;
+            for (var bq : baseQuads) {
+                var bs = bq.getSprite();
+                // 1.20.1 的 TextureAtlasSprite 无 getName()；贴图名取 contents().name()（ResourceLocation）。
+                if (bs != null && as.contents().name().equals(bs.contents().name())) return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -36,7 +36,13 @@ public final class GTUFModels {
                                                                            ResourceLocation baseCasingTexture,
                                                                            ResourceLocation overlayDir) {
         return GTMachineModels.createWorkableCasingMachineModel(baseCasingTexture, overlayDir)
-                .andThen(builder -> builder.addDynamicRenderer(() -> new GTUFTieredPartRender()));
+                .andThen(builder -> builder
+                        // GTM 的 renderPartOverrides 用控制器模型的 replaceableTextures 生成 blank
+                        // 覆盖表来清空部件 base quads；createWorkableCasingMachineModel 只设了
+                        // textureOverrides 不设 replaceableTextures，缺它则部件 base 未清空，
+                        // 与外壳 quads 共面叠加（z-fight）产生闪烁或保留原本材质。
+                        .addReplaceableTextures("bottom", "top", "side", "all")
+                        .addDynamicRenderer(() -> new GTUFTieredPartRender()));
     }
 
     /**
@@ -85,7 +91,10 @@ public final class GTUFModels {
                                                                                  ResourceLocation overlayDir,
                                                                                  BoilerFireboxType fireboxType) {
         return GTMachineModels.createWorkableCasingMachineModel(baseCasingTexture, overlayDir)
-                .andThen(builder -> builder.addDynamicRenderer(() -> new GTUFTieredBoilerPartRender(fireboxType)));
+                .andThen(builder -> builder
+                        // 同 createTieredMachineModel：补 replaceableTextures 使部件 base 被 blank 清空
+                        .addReplaceableTextures("bottom", "top", "side", "all")
+                        .addDynamicRenderer(() -> new GTUFTieredBoilerPartRender(fireboxType)));
     }
 
     /**

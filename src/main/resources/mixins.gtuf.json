@@ -6,5 +6,8 @@
   "refmap": "mixins.gtuf.refmap.json",
   "mixins": [
     "GTUFRecipeLogicMixin"
+  ],
+  "client": [
+    "GTUFMachineModelMixin"
   ]
 }

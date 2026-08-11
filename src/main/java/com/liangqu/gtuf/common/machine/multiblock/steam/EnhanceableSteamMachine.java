@@ -6,7 +6,6 @@ import com.gregtechceu.gtceu.api.recipe.GTRecipeType;
 import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
-import com.gregtechceu.gtceu.common.data.GTBlocks;
 
 import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
 import com.lowdragmc.lowdraglib.syncdata.annotation.Persisted;
@@ -15,11 +14,11 @@ import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.block.state.BlockState;
 
 import com.liangqu.gtuf.api.machine.multiblock.ParallelMachine;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.common.machine.multiblock.base.SteamMultiBlockBase;
+import com.liangqu.gtuf.config.GTUF_Config;
 
 import java.util.List;
 
@@ -30,9 +29,10 @@ import javax.annotation.Nullable;
  * 可增强蒸汽多方块机器：由结构方块类型驱动两种机制——
  * <ul>
  * <li><b>外壳等级 (CasingTier)</b>：蒸汽机械方块=1，脱氧钢机械方块=2，
- * 决定最大并行数 = 初始并行数 × 4^(外壳等级-1)</li>
+ * 决定最大并行数 = 初始并行数 × 并行倍率^(外壳等级-1)（并行倍率由 config 控制，默认 4）</li>
  * <li><b>框架等级 (FrameTier)</b>：青铜框架=1，钢框架=2，
- * 决定配方速度（Tier1 无加速，加速从 Tier2 开始，公式见 {@link #applyFrameSpeed}）</li>
+ * 决定配方速度（Tier1 无加速，加速从 Tier2 开始，步长由 config 控制，默认 0.1，
+ * 公式见 {@link #applyFrameSpeed}）</li>
  * </ul>
  * 等级在结构成形时从 {@link com.gregtechceu.gtceu.api.pattern.util.PatternMatchContext} 读取，
  * 其中外壳等级需要持久化并同步客户端（部件外观渲染按它匹配外壳），随结构重新成形即刷新。
@@ -95,27 +95,18 @@ public class EnhanceableSteamMachine extends SteamMultiBlockBase implements Para
         return frameTier;
     }
 
-    /**
-     * 部件外观 = 结构实际使用的外壳：Tier1 青铜机壳（steam_machine_casing），
-     * Tier2 脱氧钢机壳（solid_machine_casing）。这样成型后仓/总线材质与被替换外壳一致。
-     */
-    @Override
-    protected BlockState getPartAppearanceState() {
-        return getCasingTier() >= 2 ? GTBlocks.CASING_STEEL_SOLID.get().defaultBlockState() :
-                GTBlocks.CASING_BRONZE_BRICKS.get().defaultBlockState();
-    }
-
     //////////////////////////////////////
     // *** 并行与配方处理 ***//
     //////////////////////////////////////
 
     /**
-     * 最大并行数 = 初始并行数 × 4^(外壳等级-1)。
+     * 最大并行数 = 初始并行数 × 并行倍率^(外壳等级-1)。
+     * 并行倍率由 {@link GTUF_Config#getSteamParallelBase()} 控制（默认 4）。
      * Tier1 = 初始并行数，Tier2 = 4×初始并行数。
      */
     @Override
     public int getMaxParallel() {
-        return baseParallel * (int) Math.pow(4, casingTier - 1);
+        return baseParallel * (int) Math.pow(GTUF_Config.getSteamParallelBase(), casingTier - 1);
     }
 
     @Nullable
@@ -134,12 +125,14 @@ public class EnhanceableSteamMachine extends SteamMultiBlockBase implements Para
     }
 
     /**
-     * 框架等级加速：实际时间 = 原始时间^(1-(框架等级-1)×0.1)。
+     * 框架等级加速：实际时间 = 原始时间^(1-(框架等级-1)×框架速度步长)。
+     * 步长由 {@link GTUF_Config#getSteamFrameSpeedStep()} 控制（默认 0.1）；
+     * 指数下限 0（高等级配大步长时时长收敛为 1，不产生小于 1 的时长）。
      * 如需修改加速公式，直接覆盖此方法。
      */
     protected GTRecipe applyFrameSpeed(GTRecipe recipe) {
         if (frameTier > 1) {
-            double exponent = 1.0 - (frameTier - 1) * 0.1;
+            double exponent = Math.max(0.0, 1.0 - (frameTier - 1) * GTUF_Config.getSteamFrameSpeedStep());
             recipe.duration = Math.max(1, (int) Math.round(Math.pow(recipe.duration, exponent)));
         }
         return recipe;

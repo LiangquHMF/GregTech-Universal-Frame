@@ -1,0 +1,21 @@
+{
+  "gtuf.multiblock.parallel_amount": "并行数: %s",
+  "gtuf.multiblock.casing_tier": "外壳等级: %s",
+  "gtuf.multiblock.frame_tier": "框架等级: %s",
+  "gtuf.multiblock.pipe_tier": "管道等级: %s",
+  "gtuf.multiblock.energy_multiplier": "能耗倍率: %s",
+  "gtuf.multiblock.speed_multiplier": "速度倍率: %s",
+  "gtuf.multiblock.pattern.error.casing": "所有的机械方块必须是同一等级",
+  "gtuf.multiblock.pattern.error.frame": "所有的框架方块必须是同一等级",
+  "gtuf.multiblock.pattern.error.universal_casing": "所有的机械方块必须是同一等级",
+  "gtuf.multiblock.pattern.error.universal_frame": "所有的框架方块必须是同一等级",
+  "gtuf.multiblock.pattern.error.universal_pipe": "所有的管道方块必须是同一等级",
+  "gtuf.gui.decrease": "[-]",
+  "gtuf.gui.increase": "[+]",
+  "gtuf.gui.parallel": "并行控制:",
+  "gtuf.machine.enhanced_parallel_hatch.tooltip": "允许同时处理 %s 个配方",
+  "gtuf.machine.enhanced_fluid_hatch.tooltip": "Capacity quadruples per tier and is not capped. Tooltip shows theoretical capacity; actual storage is clamped to 2,147,483,647 mB.",
+  "gtuf.machine.thread_hatch.tooltip": "允许同时处理 %s 种配方",
+  "gtuf.multiblock.active_threads": "活跃线程数: %s",
+  "config.jade.plugin_gtuf.thread_provider": "[GTUF] Thread Info"
+}
