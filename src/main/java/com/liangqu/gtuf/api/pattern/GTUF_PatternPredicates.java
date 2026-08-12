@@ -16,9 +16,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.registries.ForgeRegistries;
 
+import com.liangqu.gtuf.config.GTUF_Config;
+
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * GTUF 自定义多方块结构检测谓词，模仿 {@link com.gregtechceu.gtceu.api.pattern.Predicates#heatingCoils()}。
@@ -44,9 +47,34 @@ public final class GTUF_PatternPredicates {
     public static final String UNIVERSAL_PIPE_TIER_KEY = "UniversalPipeType";
     public static final String UNIVERSAL_GEARBOX_TIER_KEY = "UniversalGearboxType";
     public static final String UNIVERSAL_FIREBOX_TIER_KEY = "UniversalFireboxType";
+    /** 通用玻璃等级。 */
+    public static final String GLASS_TIER_KEY = "GlassType";
 
     /** 结构实际使用的外壳方块注册名（由 {@link #Casing} 谓词写入 MatchContext）。 */
     public static final String STRUCTURE_CASING_KEY = "StructureCasing";
+
+    /** 玻璃混用等级错误键。 */
+    public static final String GLASS_ERROR_KEY = "gtuf.multiblock.pattern.error.glass";
+    /** 玻璃等级不足错误键（低于 {@link #GlassTier(int)} 要求的最低等级）。 */
+    public static final String GLASS_MIN_ERROR_KEY = "gtuf.multiblock.pattern.error.glass.min";
+
+    /**
+     * 通用玻璃方块注册名 → 玻璃等级（= 电压等级，九压标准 ULV=1/LV=2/…/UV=9）。
+     *
+     * <p>
+     * 与 {@link #GlassTier(int)} 谓词共享，tooltip mixin
+     * {@code GTUFGlassTooltipMixin} 也按此表给方块注入"玻璃等级"提示。
+     * 键用 {@link ResourceLocation#toString()} 的注册名（如 {@code "minecraft:glass"}、
+     * {@code "gtceu:tempered_glass"}），不依赖 {@link GTBlocks#get()} 的运行时注册顺序。
+     * </p>
+     *
+     * <p>
+     * 映射由 {@link GTUF_Config} 的 {@code [glass].glassTiers} 配置驱动（完整列表，默认值
+     * 即下方内置六个玻璃），整合包可新增其他模组的玻璃、改等级或删除条目；本字段引用
+     * config 的运行期共享 map，config 重载（游戏内 reload 或重启）后原地刷新可见最新值。
+     * </p>
+     */
+    public static final Map<String, Integer> GLASS_TIERS = GTUF_Config.getGlassTiers();
 
     private GTUF_PatternPredicates() {}
 
@@ -184,6 +212,24 @@ public final class GTUF_PatternPredicates {
     }
 
     /**
+     * 通用玻璃等级（无最低等级门槛）：匹配 {@link #GLASS_TIERS} 中任一方块并按等级
+     * 写入 {@link #GLASS_TIER_KEY}；同结构混用等级由 {@code checkTier} 拦截不成型。
+     */
+    public static TraceabilityPredicate GlassTier() {
+        return glassTierPredicate(1);
+    }
+
+    /**
+     * 通用玻璃等级（带最低等级门槛）：同 {@link #GlassTier()}，但低于 {@code minTier} 的玻璃
+     * 直接报错不成型（不写入等级）。用于需要强制高等级玻璃的机器。
+     *
+     * @param minTier 允许的最低玻璃等级（1=原版，2=遮光，3=钢化，4=超净间，5=夹层，7=聚变）
+     */
+    public static TraceabilityPredicate GlassTier(int minTier) {
+        return glassTierPredicate(minTier);
+    }
+
+    /**
      * 非空方块才写入映射（ChemicalHelper 对未知组合可能返回 null）。
      */
     private static void putIfNotNull(Map<Block, Integer> blockTiers, Block block, int tier) {
@@ -193,8 +239,24 @@ public final class GTUF_PatternPredicates {
     /**
      * 等级检测谓词工厂：把"方块 → 等级"映射包装成 {@link TraceabilityPredicate}。
      * 候选方块按传入顺序生成（JEI 预览与等级一一对应），匹配时写入等级并检查混用。
+     *
+     * <p>
+     * 预览候选经 {@link GTUFTierPreviewState#reorder} 感知客户端 JEI「整体提升」档位：
+     * 档位 &gt; 1 时目标档方块重排到数组首位，GTM 预览烘焙恒取 {@code candidates[0]}，
+     * 使整个结构的所有等级谓词同步升级。服务端档位恒 1，候选顺序不变、真实成型不受影响。
+     * 候选 Supplier 同时登记进 {@link GTUFTierPreviewState#TIER_CANDIDATES}，
+     * 供 JEI 预览 mixin 按身份识别本谓词属于等级谓词。
+     * </p>
      */
     private static TraceabilityPredicate tierPredicate(Map<Block, Integer> blockTiers, String key, String errorKey) {
+        // 按等级值升序生成候选：candidates[0] 恒为 T1、candidates[tier-1] 恒为第 tier 档。
+        // 不能直接用 keySet 顺序——调用方传入的 LinkedHashMap 由 Map.of(...) 拷贝而来，
+        // 而 Map.of 的迭代顺序未定义（与插入序无关），会导致预览档位与方块错位。
+        Supplier<BlockInfo[]> candidates = () -> GTUFTierPreviewState.reorder(blockTiers.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .map(entry -> BlockInfo.fromBlockState(entry.getKey().defaultBlockState()))
+                .toArray(BlockInfo[]::new));
+        GTUFTierPreviewState.TIER_CANDIDATES.add(candidates);
         return new TraceabilityPredicate(blockWorldState -> {
             var blockState = blockWorldState.getBlockState();
             for (var entry : blockTiers.entrySet()) {
@@ -203,10 +265,41 @@ public final class GTUF_PatternPredicates {
                 }
             }
             return false;
-        }, () -> blockTiers.keySet().stream()
-                .map(block -> BlockInfo.fromBlockState(block.defaultBlockState()))
-                .toArray(BlockInfo[]::new))
+        }, candidates)
                 .addTooltips(Component.translatable(errorKey));
+    }
+
+    /**
+     * 玻璃等级检测谓词：{@link #tierPredicate} 的玻璃专用版，支持最低等级门槛。
+     * 低于 {@code minTier} 的玻璃直接报 {@link #GLASS_MIN_ERROR_KEY} 返回 false（不成型、
+     * 不写入等级）；达到门槛后复用 {@code checkTier} 做混用检查。
+     */
+    private static TraceabilityPredicate glassTierPredicate(int minTier) {
+        // 与 tierPredicate 相同：按玻璃等级值升序生成候选，保证 candidates[0] 恒为最低档。
+        Supplier<BlockInfo[]> candidates = () -> GTUFTierPreviewState.reorder(GLASS_TIERS.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .map(entry -> {
+                    ResourceLocation rl = ResourceLocation.tryParse(entry.getKey());
+                    Block block = rl == null ? null : ForgeRegistries.BLOCKS.getValue(rl);
+                    return block == null ? BlockInfo.fromBlockState(Blocks.AIR.defaultBlockState()) :
+                            BlockInfo.fromBlockState(block.defaultBlockState());
+                })
+                .toArray(BlockInfo[]::new));
+        GTUFTierPreviewState.TIER_CANDIDATES.add(candidates);
+        return new TraceabilityPredicate(blockWorldState -> {
+            var blockState = blockWorldState.getBlockState();
+            var blockId = ForgeRegistries.BLOCKS.getKey(blockState.getBlock()).toString();
+            Integer tier = GLASS_TIERS.get(blockId);
+            if (tier != null) {
+                if (tier < minTier) {
+                    blockWorldState.setError(new PatternStringError(GLASS_MIN_ERROR_KEY));
+                    return false;
+                }
+                return checkTier(blockWorldState, GLASS_TIER_KEY, tier, GLASS_ERROR_KEY);
+            }
+            return false;
+        }, candidates)
+                .addTooltips(Component.translatable(GLASS_ERROR_KEY));
     }
 
     /**

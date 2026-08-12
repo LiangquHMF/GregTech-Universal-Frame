@@ -23,6 +23,11 @@ sourceSets {
 }
 
 repositories {
+    // 本地 GTM jar 优先（快速切换版本测试）：libs/gtm/ 下放 gtceu-1.20.1-<gtm_version>-slim.jar，
+    // 依赖坐标命中本地 flatDir；无本地文件时自动回退下面的 GTCEu Maven。详见 gradle.properties 的 gtm_version 注释。
+    flatDir {
+        dirs 'libs/gtm'
+    }
     maven {
         name = 'GTCEu Maven'
         url = 'https://maven.gtceu.com'
@@ -150,6 +155,9 @@ dependencies {
     minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
 
     //GTM
+    // 本地 GTM jar（快速切换版本测试）：在 libs/gtm/ 下放 gtceu-1.20.1-<gtm_version>-slim.jar
+    // 并改 gradle.properties 的 gtm_version，此坐标会优先命中顶部 repositories 的本地 flatDir；
+    // 本地没有该版本时自动回退 maven.gtceu.com 解析同名 slim 包。
     implementation fg.deobf("com.gregtechceu.gtceu:gtceu-${minecraft_version}:${gtm_version}:slim") { transitive = false
         exclude group: 'com.tterrag.registrate'}
     implementation fg.deobf("com.tterrag.registrate:Registrate:${registrate_version}"){transitive = false}

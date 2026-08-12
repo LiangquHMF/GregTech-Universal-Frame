@@ -1,5 +1,6 @@
 package com.liangqu.gtuf.common.machine.trait;
 
+import com.gregtechceu.gtceu.api.capability.recipe.FluidRecipeCapability;
 import com.gregtechceu.gtceu.api.capability.recipe.IO;
 import com.gregtechceu.gtceu.api.capability.recipe.ItemRecipeCapability;
 import com.gregtechceu.gtceu.api.capability.recipe.RecipeCapability;
@@ -12,6 +13,7 @@ import com.gregtechceu.gtceu.api.recipe.GTRecipe;
 import com.gregtechceu.gtceu.api.recipe.GTRecipeType;
 import com.gregtechceu.gtceu.api.recipe.RecipeHelper;
 import com.gregtechceu.gtceu.api.recipe.content.Content;
+import com.gregtechceu.gtceu.api.recipe.ingredient.FluidIngredient;
 import com.gregtechceu.gtceu.api.recipe.ingredient.SizedIngredient;
 import com.gregtechceu.gtceu.api.registry.GTRegistries;
 
@@ -19,6 +21,7 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.fluids.FluidStack;
 
 import com.liangqu.gtuf.api.machine.IThreadModifierMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
@@ -304,13 +307,23 @@ public class GTUFThreadingLogic {
     }
 
     /**
-     * 取配方第一个物品产物的显示名（GUI / Jade 共用）。
+     * 取配方第一个产物的显示名（GUI / Jade 共用）：优先物品产物，无物品产物时兜底
+     * 流体产物（如 test_recipetype 的水→岩浆只输出流体）。
      * 来源 GTNA {@code getRecipeDisplayInfo} 的输出名解析，抽取为静态方法复用。
      */
     public static String outputName(GTRecipe recipe) {
-        if (recipe == null || !recipe.outputs.containsKey(ItemRecipeCapability.CAP)) return "Unknown";
+        if (recipe == null) return "Unknown";
+        String itemName = itemOutputName(recipe);
+        if (itemName != null) return itemName;
+        String fluidName = fluidOutputName(recipe);
+        if (fluidName != null) return fluidName;
+        return "Unknown";
+    }
+
+    /** 取配方第一个物品产物的显示名；无物品产物返回 null。 */
+    private static String itemOutputName(GTRecipe recipe) {
         List<Content> itemOutputs = recipe.outputs.get(ItemRecipeCapability.CAP);
-        if (itemOutputs == null || itemOutputs.isEmpty()) return "Unknown";
+        if (itemOutputs == null || itemOutputs.isEmpty()) return null;
         Object inner = itemOutputs.get(0).getContent();
         if (inner instanceof ItemStack stack) {
             return stack.getHoverName().getString();
@@ -318,7 +331,21 @@ public class GTUFThreadingLogic {
             ItemStack[] stacks = sized.getItems();
             if (stacks.length > 0) return stacks[0].getHoverName().getString();
         }
-        return "Unknown";
+        return null;
+    }
+
+    /** 取配方第一个流体产物的显示名（Forge {@link FluidStack}）；无流体产物返回 null。 */
+    private static String fluidOutputName(GTRecipe recipe) {
+        List<Content> fluidOutputs = recipe.outputs.get(FluidRecipeCapability.CAP);
+        if (fluidOutputs == null || fluidOutputs.isEmpty()) return null;
+        Object inner = fluidOutputs.get(0).getContent();
+        if (inner instanceof FluidStack stack) {
+            return stack.getDisplayName().getString();
+        } else if (inner instanceof FluidIngredient ingredient) {
+            FluidStack[] stacks = ingredient.getStacks();
+            if (stacks.length > 0) return stacks[0].getDisplayName().getString();
+        }
+        return null;
     }
 
     /** 线程模式投影：GUI 进度条显示第一条活跃配方进度。 */

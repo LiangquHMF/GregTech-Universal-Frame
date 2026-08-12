@@ -3,12 +3,15 @@ package com.liangqu.gtuf.common.data;
 import com.gregtechceu.gtceu.GTCEu;
 import com.gregtechceu.gtceu.api.GTValues;
 import com.gregtechceu.gtceu.api.capability.recipe.IO;
+import com.gregtechceu.gtceu.api.capability.recipe.ItemRecipeCapability;
 import com.gregtechceu.gtceu.api.data.RotationState;
 import com.gregtechceu.gtceu.api.machine.MachineDefinition;
+import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition;
 import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility;
 import com.gregtechceu.gtceu.api.machine.property.GTMachineModelProperties;
 import com.gregtechceu.gtceu.api.machine.trait.RecipeLogic;
 import com.gregtechceu.gtceu.api.registry.registrate.MachineBuilder;
+import com.gregtechceu.gtceu.api.registry.registrate.MultiblockMachineBuilder;
 import com.gregtechceu.gtceu.common.data.machines.GTMachineUtils;
 import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 import com.gregtechceu.gtceu.common.machine.multiblock.part.SteamHatchPartMachine;
@@ -20,6 +23,7 @@ import net.minecraft.resources.ResourceLocation;
 import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
 import com.liangqu.gtuf.common.data.models.GTUFModels;
+import com.liangqu.gtuf.common.machine.multiblock.electric.EnhancedCoilElectricMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedFluidHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedParallelHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
@@ -191,6 +195,41 @@ public class GTUF_Machines {
     }
 
     /**
+     * 线圈增强电力多方块机注册入口（框架级工厂）：返回<b>未注册</b>的 {@link MachineBuilder}，
+     * 由调用方继续链式设置 {@code recipeType(s)}、{@code pattern}（需含线圈位
+     * {@code Predicates.heatingCoils()}，保证 "CoilType" 写入 MatchContext）、{@code model}
+     * 后再 {@code register()}。框架只提供配方逻辑，结构形状由整合包自定义
+     * （同 {@link #colorOverlayHull} 的 KJS 友好 builder 返回模式）。
+     *
+     * <p>
+     * 四个创建期参数对应 {@code EnhancedCoilElectricMachine} 的四个特性：
+     * 初始并行数、线圈提速（≤0 关闭）、线圈额外并行（≤0 关闭）、线圈能耗减免（≤0 关闭），
+     * 另有过时钟方式（true 完美 / false 非完美）。
+     * </p>
+     *
+     * @param name             注册名（完整 id，如 "enhanced_coil_furnace"）
+     * @param baseParallel     初始并行数（≥1，恒启用）
+     * @param speedStep        线圈提速步长（≤0 关闭）
+     * @param parallelPerLevel 线圈额外并行参数（≤0 关闭）
+     * @param energyStep       线圈能耗减免步长（≤0 关闭）
+     * @param perfectOC        过时钟方式（true 完美 / false 非完美）
+     * @return 已配置好构造器与配方修改器的 MultiblockMachineBuilder（未 register）
+     */
+    public static MultiblockMachineBuilder<MultiblockMachineDefinition, ?> coilEnhanceableElectricMachine(
+                                                                                                          String name,
+                                                                                                          int baseParallel,
+                                                                                                          double speedStep,
+                                                                                                          double parallelPerLevel,
+                                                                                                          double energyStep,
+                                                                                                          boolean perfectOC) {
+        return REGISTRATE.multiblock(name, holder -> new EnhancedCoilElectricMachine(
+                holder, baseParallel, speedStep, parallelPerLevel, energyStep, perfectOC))
+                .rotationState(RotationState.ALL)
+                .recipeModifier(EnhancedCoilElectricMachine::recipeModifier, true)
+                .addOutputLimit(ItemRecipeCapability.CAP, 1);
+    }
+
+    /**
      * 注册线程仓（缺省 UV~MAX 七级）：线程数上限 = 2^(tier-LuV)，
      * 即 UV=4, UHV=8, UEV=16, UIV=32, UXV=64, OpV=128, MAX=256。GUI 中可调 1~上限，默认 1。
      * 安装该仓室的多方块通过 {@link com.liangqu.gtuf.api.machine.IThreadModifierMachine} 读取
@@ -265,7 +304,8 @@ public class GTUF_Machines {
      * @param emissive 发光 overlay 纹理名，如 overlay_fluid_hatch（可为 null，同 Java 语义）
      * @return 原 builder，可继续链式调用
      */
-    public static MachineBuilder<?> colorOverlayHull(MachineBuilder<?> builder, String overlay, String emissive) {
+    @SuppressWarnings("rawtypes")
+    public static MachineBuilder colorOverlayHull(MachineBuilder builder, String overlay, String emissive) {
         return builder.colorOverlayTieredHullModel(overlay, null, emissive);
     }
 
@@ -293,7 +333,8 @@ public class GTUF_Machines {
      * @param overlayTexName 蒸汽外壳纹理名，如 steam_hatch（会拼成 block/machine/part/steam_hatch）
      * @return 原 builder，可继续链式调用
      */
-    public static MachineBuilder<?> overlaySteamHull(MachineBuilder<?> builder, String overlayTexName) {
+    @SuppressWarnings("rawtypes")
+    public static MachineBuilder overlaySteamHull(MachineBuilder builder, String overlayTexName) {
         return builder.overlaySteamHullModel(GTCEu.id("block/machine/part/" + overlayTexName));
     }
 

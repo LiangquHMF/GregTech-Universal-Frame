@@ -8,6 +8,9 @@
     "GTUFRecipeLogicMixin"
   ],
   "client": [
-    "GTUFMachineModelMixin"
+    "GTUFMachineModelMixin",
+    "GTUFGlassTooltipMixin",
+    "GTUFPatternPreviewTierMixin",
+    "GTUFBlockPatternAccessor"
   ]
 }

@@ -20,6 +20,7 @@ import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
+import com.liangqu.gtuf.common.data.GTUF_Machines;
 import com.liangqu.gtuf.common.data.models.GTUFModels;
 import com.liangqu.gtuf.common.machine.multiblock.electric.ConfigurableElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.EnhanceableElectricMachine;
@@ -262,6 +263,32 @@ public class GTUF_Machine_Test {
                     .where("D", GTUF_PatternPredicates.UniversalPipeTier())
                     .where("C", GTUF_PatternPredicates.UniversalFrameTier())
                     .where("A", GTUF_PatternPredicates.UniversalCasingTier().setMinGlobalLimited(40)
+                            .or(Predicates.abilities(IMPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(EXPORT_ITEMS).setPreviewCount(1))
+                            .or(Predicates.abilities(INPUT_ENERGY).setExactLimit(1)))
+                    .build())
+            .model(GTUFModels.createTieredMachineModel(
+                    GTCEu.id("block/casings/solid/machine_casing_solid_steel"),
+                    GTCEu.id("block/multiblock/large_chemical_reactor")))
+            .register();
+
+    /**
+     * 线圈增强电力多方块测试机（经 GTUF_Machines 公开工厂注册，验证 API 路径）：
+     * 初始并行 4 + 线圈提速(0.1) + 线圈额外并行(每级 8) + 线圈能耗减免(0.05)，完美过时钟。
+     * 内壁放线圈（heatingCoils）驱动并行/提速/降能耗，验证 EnhancedCoilElectricMachine。
+     */
+    public static final MachineDefinition COIL_ENHANCE_TEST = GTUF_Machines
+            .coilEnhanceableElectricMachine("coil_enhance_test", 4, 0.1, 8.0, 0.05, true)
+            .recipeType(GTRecipeTypes.ALLOY_SMELTER_RECIPES)
+            .pattern(definition -> FactoryBlockPattern.start()
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
+                    .aisle("AAA###", "AKA###", "AAA###")
+                    .where("#", Predicates.any())
+                    .where("K", Predicates.controller(blocks(definition.getBlock())))
+                    .where("C", Predicates.heatingCoils())
+                    .where("A", blocks(CASING_STEEL_SOLID.get()).setMinGlobalLimited(40)
                             .or(Predicates.abilities(IMPORT_ITEMS).setPreviewCount(1))
                             .or(Predicates.abilities(EXPORT_ITEMS).setPreviewCount(1))
                             .or(Predicates.abilities(INPUT_ENERGY).setExactLimit(1)))

@@ -37,9 +37,9 @@ GTUF is a continuously updated mod.The code comes partly from other open-source 
 
 ## 📥 Downloads & Dependencies
 
-| Minecraft Version |   GTCEu Version   |      Status       | Download                                                                                                 |
-|:-----------------:|:-----------------:|:-----------------:|:---------------------------------------------------------------------------------------------------------|
-|     **1.20.1** | **[ 7.1.4-7.4 )** | ✅ **Recommended** | [![Latest](https://img.shields.io/badge/Download-Latest-success)](https://github.com/LiangquHMF/GregTech-Universal-Frame/releases/) |
+| Minecraft Version |    GTCEu Version    |      Status       | Download                                                                                                 |
+|:-----------------:|:-------------------:|:-----------------:|:---------------------------------------------------------------------------------------------------------|
+|     **1.20.1** | **[ 7.1.4-7.5.3 ]** | ✅ **Recommended** | [![Latest](https://img.shields.io/badge/Download-Latest-success)](https://github.com/LiangquHMF/GregTech-Universal-Frame/releases/) |
 
 **Requirements:**
 1.  [GregTech CEu Modern](https://www.curseforge.com/minecraft/mc-mods/gregtechceu-modern/files/7262157)
