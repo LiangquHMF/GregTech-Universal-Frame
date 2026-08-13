@@ -64,8 +64,7 @@ public final class GTUF_PatternPredicates {
      * <p>
      * 与 {@link #GlassTier(int)} 谓词共享，tooltip mixin
      * {@code GTUFGlassTooltipMixin} 也按此表给方块注入"玻璃等级"提示。
-     * 键用 {@link ResourceLocation#toString()} 的注册名（如 {@code "minecraft:glass"}、
-     * {@code "gtceu:tempered_glass"}），不依赖 {@link GTBlocks#get()} 的运行时注册顺序。
+     * 键用 {@link ResourceLocation#toString()} 的注册名（如 {@code "minecraft:glass"}
      * </p>
      *
      * <p>

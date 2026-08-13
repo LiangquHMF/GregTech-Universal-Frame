@@ -12,6 +12,10 @@ public class ClientProxy extends CommonProxy {
     public ClientProxy() {
         super();
         init();
+        // 压力管道客户端模型：7.5.3 走 RegisterDynamicResourcesEvent 动态模型（java75 变体），
+        // 7.1.4~7.4.1 由 MaterialPipeBlock 构造器自带模型（java714 变体空实现）——两变体
+        // 均由 PressurePipeModels.init() 统一入口，按 gtm_version 切换源码目录。
+        PressurePipeModels.init();
     }
 
     /**

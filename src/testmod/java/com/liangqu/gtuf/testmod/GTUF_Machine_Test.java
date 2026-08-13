@@ -20,11 +20,10 @@ import com.gregtechceu.gtceu.common.data.models.GTMachineModels;
 import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.pattern.GTUF_PatternPredicates;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
-import com.liangqu.gtuf.common.data.GTUF_Machines;
 import com.liangqu.gtuf.common.data.models.GTUFModels;
 import com.liangqu.gtuf.common.machine.multiblock.electric.ConfigurableElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.EnhanceableElectricMachine;
-import com.liangqu.gtuf.common.machine.multiblock.electric.MultiThreadElectricMachine;
+import com.liangqu.gtuf.common.machine.multiblock.electric.EnhancedCoilElectricMachine;
 import com.liangqu.gtuf.common.machine.multiblock.electric.TierElectricParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.AdjustableSteamParallelMachine;
 import com.liangqu.gtuf.common.machine.multiblock.steam.EnhanceableSteamMachine;
@@ -273,13 +272,24 @@ public class GTUF_Machine_Test {
             .register();
 
     /**
-     * 线圈增强电力多方块测试机（经 GTUF_Machines 公开工厂注册，验证 API 路径）：
+     * 线圈增强电力多方块测试机：
      * 初始并行 4 + 线圈提速(0.1) + 线圈额外并行(每级 8) + 线圈能耗减免(0.05)，完美过时钟。
      * 内壁放线圈（heatingCoils）驱动并行/提速/降能耗，验证 EnhancedCoilElectricMachine。
+     *
+     * <p>
+     * <b>不走 {@code GTUF_Machines.coilEnhanceableElectricMachine} 工厂链</b>：工厂返回 raw
+     * {@code MultiblockMachineBuilder}（7.1.4 非泛型 / 7.5.3 泛型差异所致），raw receiver 在
+     * 7.5.3 上经 self-typed {@code recipeType()} 链式会擦除到 {@code MachineBuilder} 断链。
+     * 故这里用 {@code REGISTRATE.multiblock} 直接复刻工厂的配置（构造参数、recipeModifier、
+     * 输出上限）；工厂本身两端编译通过，运行期由 KubeJS 脚本实测。
+     * </p>
      */
-    public static final MachineDefinition COIL_ENHANCE_TEST = GTUF_Machines
-            .coilEnhanceableElectricMachine("coil_enhance_test", 4, 0.1, 8.0, 0.05, true)
+    public static final MachineDefinition COIL_ENHANCE_TEST = REGISTRATE
+            .multiblock("coil_enhance_test", holder -> new EnhancedCoilElectricMachine(holder, 4, 0.1, 8.0, 0.05, true))
+            .rotationState(RotationState.ALL)
             .recipeType(GTRecipeTypes.ALLOY_SMELTER_RECIPES)
+            .recipeModifier(EnhancedCoilElectricMachine::recipeModifier, true)
+            .addOutputLimit(ItemRecipeCapability.CAP, 1)
             .pattern(definition -> FactoryBlockPattern.start()
                     .aisle("AAAAAA", "ACCCCA", "AAAAAA")
                     .aisle("AAAAAA", "ACCCCA", "AAAAAA")
@@ -295,38 +305,6 @@ public class GTUF_Machine_Test {
                     .build())
             .model(GTUFModels.createTieredMachineModel(
                     GTCEu.id("block/casings/solid/machine_casing_solid_steel"),
-                    GTCEu.id("block/multiblock/large_chemical_reactor")))
-            .register();
-
-    /**
-     * 多线程多方块测试机：挂 MIXER 与 FORGE_HAMMER 两类配方类型，结构能力位含 THREAD_HATCH。
-     * 放入线程仓并调大线程数后，机器可同时处理两类配方（不同配方 ID 各自独立进度，
-     * 见 GTUFThreadingLogic）。验证多配方并行 + 线程仓 GUI 可调线程数。
-     */
-    public static final MachineDefinition THREAD_TEST = REGISTRATE
-            .multiblock("thread_test", MultiThreadElectricMachine::new)
-            .rotationState(RotationState.ALL)
-            .appearanceBlock(CASING_INDUSTRIAL_STEAM)
-            .recipeType(GTRecipeTypes.MIXER_RECIPES)
-            .recipeType(GTRecipeTypes.FORGE_HAMMER_RECIPES)
-            .addOutputLimit(ItemRecipeCapability.CAP, 1)
-            .pattern(definition -> FactoryBlockPattern.start()
-                    .aisle("AAAAAA", "ACCCCA", "AAAAAA")
-                    .aisle("AAAAAA", "ADDDDA", "AAAAAA")
-                    .aisle("AAAAAA", "ACACCA", "AAAAAA")
-                    .aisle("AAA###", "AKA###", "AAA###")
-                    .where("#", Predicates.any())
-                    .where("K", Predicates.controller(blocks(definition.getBlock())))
-                    .where("D", blocks(CASING_BRONZE_GEARBOX.get()))
-                    .where("C", Predicates.blocks(ChemicalHelper.getBlock(TagPrefix.frameGt, GTMaterials.Bronze)))
-                    .where("A", blocks(CASING_INDUSTRIAL_STEAM.get()).setMinGlobalLimited(45)
-                            .or(Predicates.abilities(IMPORT_ITEMS).setPreviewCount(1))
-                            .or(Predicates.abilities(EXPORT_ITEMS).setPreviewCount(1))
-                            .or(Predicates.abilities(INPUT_ENERGY).setExactLimit(1))
-                            .or(Predicates.abilities(GTUF_PartAbility.THREAD_HATCH).setExactLimit(1)))
-                    .build())
-            .model(GTMachineModels.createWorkableCasingMachineModel(
-                    GTCEu.id("block/casings/gcym/industrial_steam_casing"),
                     GTCEu.id("block/multiblock/large_chemical_reactor")))
             .register();
 

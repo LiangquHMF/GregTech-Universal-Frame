@@ -14,6 +14,28 @@ sourceSets {
     main.resources {
         srcDir generatedResources
     }
+    main.java {
+        // 多版本源码集：按 gtm_version 选择 GTUF 的版本分源。src/main/java 为版本无关共享代码，
+        // 下列变体目录互斥、每次构建只有一组进入编译路径：
+        //   gtm_version 前缀 7.5 → src/main/java75：RecipeCondition<T> 自引用泛型 +
+        //     client.model.pipe.PipeModel 动态模型（RegisterDynamicResourcesEvent）
+        //   gtm_version = 7.1.4 → src/main/java714 + src/main/java-legacy-pipe：
+        //     714 为 RecipeCondition 非泛型且 serialize 可覆写（7.1.4 网络同步走
+        //     toNetwork/fromNetwork，需覆写补齐 min/max）；legacy-pipe 为旧
+        //     client.model.PipeModel 构造器内建模型（7.1.4~7.4.1 共用）
+        //   gtm_version 7.2.x/7.3.x/7.4.x → src/main/java72x + src/main/java-legacy-pipe：
+        //     72x 为 RecipeCondition 非泛型 + serialize final/static（纯 Codec 序列化，无覆写）
+        if (gtm_version.startsWith('7.5')) {
+            srcDir 'src/main/java75'
+        } else {
+            srcDir 'src/main/java-legacy-pipe'
+            if (gtm_version.startsWith('7.1')) {
+                srcDir 'src/main/java714'
+            } else {
+                srcDir 'src/main/java72x'
+            }
+        }
+    }
     // testmod：测试专用源码集，仅 dev/测试运行环境加载，不打包进公开发布 jar。
     // 承载测试机器注册类（GTUF_Machine_Test），引用 main 的框架 API（部件类、机器类、注册类）。
     testmod {

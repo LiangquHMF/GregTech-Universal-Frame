@@ -22,4 +22,10 @@ public final class GTUF_PartAbility {
 
     /** 线程仓能力位：安装该仓室的多方块可同时处理多类配方（线程数由仓室 GUI 配置）。 */
     public static final PartAbility THREAD_HATCH = new PartAbility("thread_hatch");
+
+    /** 压力仓能力位：安装该仓室的多方块可经压力管道与其他压力机连通传导腔压。 */
+    public static final PartAbility PRESSURE = new PartAbility("pressure");
+
+    /** 节能仓能力位：安装该仓室的多方块额外获得一个由仓室档位决定的能耗减免倍率。 */
+    public static final PartAbility ENERGY_SAVING = new PartAbility("energy_saving");
 }

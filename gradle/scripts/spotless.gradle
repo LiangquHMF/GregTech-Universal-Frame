@@ -12,7 +12,9 @@ spotless {
         endWithNewline()
     }
     java {
-        target 'src/main/java/**/*.java', 'src/test/java/**/*.java', 'src/testmod/java/**/*.java'
+        target 'src/main/java/**/*.java', 'src/main/java714/**/*.java', 'src/main/java72x/**/*.java',
+                'src/main/java-legacy-pipe/**/*.java', 'src/main/java75/**/*.java',
+                'src/test/java/**/*.java', 'src/testmod/java/**/*.java'
 
         def orderFile = file("$rootDir/spotless/spotless.importorder")
         def formatFile = file("$rootDir/spotless/spotless.eclipseformat.xml")

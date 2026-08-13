@@ -6,7 +6,6 @@ import com.gregtechceu.gtceu.api.capability.recipe.IO;
 import com.gregtechceu.gtceu.api.capability.recipe.ItemRecipeCapability;
 import com.gregtechceu.gtceu.api.data.RotationState;
 import com.gregtechceu.gtceu.api.machine.MachineDefinition;
-import com.gregtechceu.gtceu.api.machine.MultiblockMachineDefinition;
 import com.gregtechceu.gtceu.api.machine.multiblock.PartAbility;
 import com.gregtechceu.gtceu.api.machine.property.GTMachineModelProperties;
 import com.gregtechceu.gtceu.api.machine.trait.RecipeLogic;
@@ -24,9 +23,12 @@ import com.liangqu.gtuf.api.machine.multiblock.GTUF_PartAbility;
 import com.liangqu.gtuf.api.registry.GTUF_CreativeModeTabs;
 import com.liangqu.gtuf.common.data.models.GTUFModels;
 import com.liangqu.gtuf.common.machine.multiblock.electric.EnhancedCoilElectricMachine;
+import com.liangqu.gtuf.common.machine.multiblock.electric.PressureMultiblockMachine;
+import com.liangqu.gtuf.common.machine.multiblock.part.EnergySavingHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedFluidHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedParallelHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
+import com.liangqu.gtuf.common.machine.multiblock.part.PressureHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
 
 import java.util.EnumMap;
@@ -215,13 +217,14 @@ public class GTUF_Machines {
      * @param perfectOC        过时钟方式（true 完美 / false 非完美）
      * @return 已配置好构造器与配方修改器的 MultiblockMachineBuilder（未 register）
      */
-    public static MultiblockMachineBuilder<MultiblockMachineDefinition, ?> coilEnhanceableElectricMachine(
-                                                                                                          String name,
-                                                                                                          int baseParallel,
-                                                                                                          double speedStep,
-                                                                                                          double parallelPerLevel,
-                                                                                                          double energyStep,
-                                                                                                          boolean perfectOC) {
+    @SuppressWarnings("rawtypes")
+    public static MultiblockMachineBuilder coilEnhanceableElectricMachine(
+                                                                          String name,
+                                                                          int baseParallel,
+                                                                          double speedStep,
+                                                                          double parallelPerLevel,
+                                                                          double energyStep,
+                                                                          boolean perfectOC) {
         return REGISTRATE.multiblock(name, holder -> new EnhancedCoilElectricMachine(
                 holder, baseParallel, speedStep, parallelPerLevel, energyStep, perfectOC))
                 .rotationState(RotationState.ALL)
@@ -277,6 +280,108 @@ public class GTUF_Machines {
                                 1 << (tier - GTValues.LuV)))
                         .register(),
                 tiers);
+    }
+
+    /** 压力仓缺省档位：LV~HV 三级。 */
+    public static final int[] DEFAULT_PRESSURE_HATCH_TIERS = new int[] { GTValues.LV, GTValues.MV, GTValues.HV };
+
+    /**
+     * 注册压力仓（缺省 LV~HV 三级）：压力机的 IO 终端，<b>不存储压力</b>，把压力机腔体
+     * 接入压力管道网络。传导与破裂判定由 {@code PressureMultiblockMachine#pressureTick}
+     * 经 {@code PressureHatchPartMachine#getConnectedNets()} 驱动。档位仅决定机型档位展示
+     * 与传导语义，不改变功能。
+     *
+     * <p>
+     * 可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.LV, GTValues.HV}}）。
+     * </p>
+     *
+     * @param name        注册名（registerTieredMachines 会加 {@code VN[tier].toLowerCase() + "_"} 前缀）
+     * @param displayName 显示名（前接 {@code GTValues.VNF[tier]}）
+     * @param tiers       要注册的档位（tier 值），缺省 LV~HV 三级
+     * @return 按 tier 索引的 MachineDefinition 数组（tier → definition，未注册档位为 null）
+     */
+    public static MachineDefinition[] registerPressureHatches(String name, String displayName, int... tiers) {
+        if (tiers.length == 0) {
+            tiers = DEFAULT_PRESSURE_HATCH_TIERS;
+        }
+        return GTMachineUtils.registerTieredMachines(
+                REGISTRATE, name, PressureHatchPartMachine::new,
+                (tier, builder) -> builder.langValue(GTValues.VNF[tier] + " " + displayName)
+                        .rotationState(RotationState.ALL)
+                        .abilities(GTUF_PartAbility.PRESSURE)
+                        .modelProperty(GTMachineModelProperties.RECIPE_LOGIC_STATUS, RecipeLogic.Status.IDLE)
+                        .model(GTUFModels.createTieredHullMachineModel(
+                                GTCEu.id("block/machines/parallel_hatch_mk4")))
+                        .tooltips(Component.translatable("gtuf.machine.pressure_hatch.tooltip"))
+                        .register(),
+                tiers);
+    }
+
+    /** 节能仓缺省档位：LV~UV 八级。 */
+    public static final int[] DEFAULT_ENERGY_SAVING_HATCH_TIERS = new int[] {
+            GTValues.LV, GTValues.MV, GTValues.HV, GTValues.EV, GTValues.IV, GTValues.LuV, GTValues.ZPM, GTValues.UV
+    };
+
+    /**
+     * 注册节能仓（缺省 LV~UV 八级）：安装该仓室的多方块额外获得一个由仓室档位决定的能耗减免
+     * 倍率。减免公式（config {@code [energySaving]} 可调）：
+     * {@code 倍率 = max(minMultiplier, (100 - 5 × 档位差 × extraMultiplier) / 100)}，
+     * 档位差从 LV 起算 1。多仓共存取最优（减免最大者）。减免由
+     * {@code GTUFEnergySavingRecipeLogicMixin} 作用于配方最终 EUt，对任意电力多方块
+     * （含 GTM 原生机器）生效。
+     *
+     * <p>
+     * 可通过 {@code tiers} 只注册指定档位（如 {@code new int[]{GTValues.HV, GTValues.IV}}），
+     * 档位须 ≥ LV。
+     * </p>
+     *
+     * @param name        注册名（registerTieredMachines 会加 {@code VN[tier].toLowerCase() + "_"} 前缀）
+     * @param displayName 显示名（前接 {@code GTValues.VNF[tier]}）
+     * @param tiers       要注册的档位（tier 值），缺省 LV~UV 八级
+     * @return 按 tier 索引的 MachineDefinition 数组（tier → definition，未注册档位为 null）
+     */
+    public static MachineDefinition[] registerEnergySavingHatches(String name, String displayName, int... tiers) {
+        if (tiers.length == 0) {
+            tiers = DEFAULT_ENERGY_SAVING_HATCH_TIERS;
+        }
+        for (int tier : tiers) {
+            if (tier < GTValues.LV) {
+                throw new IllegalArgumentException(
+                        "节能仓仅支持 LV 及以上（tier " + GTValues.LV + "~" + GTValues.MAX + "），收到 " + tier);
+            }
+        }
+        return GTMachineUtils.registerTieredMachines(
+                REGISTRATE, name, EnergySavingHatchPartMachine::new,
+                (tier, builder) -> builder.langValue(GTValues.VNF[tier] + " " + displayName)
+                        .rotationState(RotationState.ALL)
+                        .abilities(GTUF_PartAbility.ENERGY_SAVING)
+                        .modelProperty(GTMachineModelProperties.RECIPE_LOGIC_STATUS, RecipeLogic.Status.IDLE)
+                        // 用 GTUF 工厂：多注册 bottom/top/side 可替换纹理，成型后 blank 掉仓室自身
+                        // 材质避免与外壳 z-fight 闪烁（7.1.4），配合 replacePartModelWhenFormed 覆盖
+                        // 7.3.0 的 IS_FORMED 门控。
+                        .model(GTUFModels.createTieredHullMachineModel(
+                                GTCEu.id("block/machines/parallel_hatch_mk4")))
+                        .tooltips(Component.translatable("gtuf.machine.energy_saving_hatch.tooltip",
+                                (int) Math.round((1.0 - EnergySavingHatchPartMachine.getEnergyMultiplier(tier)) * 100)))
+                        .register(),
+                tiers);
+    }
+
+    /**
+     * 压力多方块机工厂（仿 {@link #coilEnhanceableElectricMachine}）：返回已挂载
+     * {@code recipeModifier}（玻璃等级超限停机等待回区间）与输出上限的 builder，
+     * 调用方链式补 {@code recipeType/pattern/model/appearanceBlock} 后 {@code register()}。
+     * 腔压/外壳回归速率/玻璃上下限公式见 {@code PressureMultiblockMachine}。
+     *
+     * @param name 注册名
+     * @return 多方块 builder（未 register）
+     */
+    @SuppressWarnings("rawtypes")
+    public static MultiblockMachineBuilder registerPressureMultiblock(String name) {
+        return REGISTRATE.multiblock(name, PressureMultiblockMachine::new)
+                .rotationState(RotationState.ALL)
+                .recipeModifier(PressureMultiblockMachine::recipeModifier, true)
+                .addOutputLimit(ItemRecipeCapability.CAP, 1);
     }
 
     /**

@@ -5,7 +5,11 @@
   "compatibilityLevel": "JAVA_17",
   "refmap": "mixins.gtuf.refmap.json",
   "mixins": [
-    "GTUFRecipeLogicMixin"
+    "GTUFRecipeLogicMixin",
+    "GTUFRecipeBuilderMixin",
+    "GTUFMaterialBuilderMixin",
+    "GTUFEnergySavingRecipeLogicMixin",
+    "GTUFPredicatesMixin"
   ],
   "client": [
     "GTUFMachineModelMixin",

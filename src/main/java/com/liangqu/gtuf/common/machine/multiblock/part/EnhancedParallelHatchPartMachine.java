@@ -16,7 +16,6 @@ import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
 
 import net.minecraft.util.Mth;
 
-import lombok.Getter;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -40,8 +39,11 @@ public class EnhancedParallelHatchPartMachine extends TieredPartMachine implemen
     private static final int MIN_PARALLEL = 1;
 
     @Persisted
-    @Getter
     private int currentParallel = 1;
+
+    public int getCurrentParallel() {
+        return currentParallel;
+    }
 
     public EnhancedParallelHatchPartMachine(IMachineBlockEntity holder, int tier, Object... args) {
         super(holder, tier);
