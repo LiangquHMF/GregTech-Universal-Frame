@@ -73,7 +73,7 @@ public class GTUFThreadingLogic {
     /** 每 tick 单类型最多查找的候选配方数（来源 GTNA 的 30）。 */
     private static final int SEARCH_LIMIT = 30;
 
-    /** 空闲节流间隔：无线程活跃且不订阅时每 5 tick 才搜索一次新配方。 */
+    /** 空闲搜索节流间隔：keepSubscribing()==true 时每 5 tick 才搜索一次新配方（镜像原生 RecipeLogic 空闲分支）。 */
     private static final long IDLE_SEARCH_INTERVAL = 5;
 
     /** 一个活跃配方：独立进度 + 独立机会缓存。来源 GTNA {@code GTNARecipeUtils.ActiveRecipe}。 */
@@ -180,9 +180,18 @@ public class GTUFThreadingLogic {
         // 2) 有空闲线程且机器开启时，尝试启动新配方
         boolean isMachineEnabled = outer.isWorkingEnabled();
         if (isMachineEnabled && activeRecipes.size() < getMaxThreads()) {
-            // 空闲节流：无活跃配方且非订阅状态下每 IDLE_SEARCH_INTERVAL tick 才搜索一次
-            if (!activeRecipes.isEmpty() || machine.keepSubscribing() ||
-                    metaMachine.getOffsetTimer() % IDLE_SEARCH_INTERVAL == 0) {
+            // 空闲搜索节流：镜像原生 GTM RecipeLogic.serverTick 的空闲分支——
+            // machine.keepSubscribing()==true 时每 IDLE_SEARCH_INTERVAL tick 搜一次；
+            // ==false 时每 tick 无条件搜（WorkableMultiblockMachine 恒 false，原生该分支
+            // 每 tick findAndHandleRecipe——这是原生轮次无缝、并行仓无停顿的来源）。
+            // activeRecipes 非空（有线程在跑）时恒每 tick 搜索补位。
+            boolean searchNow = !activeRecipes.isEmpty();
+            if (!searchNow) {
+                searchNow = machine.keepSubscribing()
+                        ? metaMachine.getOffsetTimer() % IDLE_SEARCH_INTERVAL == 0
+                        : true;
+            }
+            if (searchNow) {
                 for (GTRecipe candidate : collectPossibleRecipes(SEARCH_LIMIT)) {
                     if (activeRecipes.size() >= getMaxThreads()) break;
                     if (isRecipeAlreadyActive(candidate)) continue;
