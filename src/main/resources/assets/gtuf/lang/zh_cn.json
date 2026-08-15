@@ -36,6 +36,7 @@
   "gtuf.multiblock.enhanced_boiler.throttle_modify": "调节节流阀",
   "gtuf.recipe.condition.pressure": "需要压力: %s ~ %s",
   "gtuf.pressure_pipe.tolerance": "耐压范围: %s ~ %s",
+  "tagprefix.pipe_normal_pressure": "普通%s压力管道",
   "gtuf.machine.pressure_hatch.tooltip": "压力仓：将压力机腔体接入压力管道网络。不存储压力，仅传导。",
   "gtuf.machine.energy_saving_hatch.tooltip": "节能仓：减少 %s%% 的配方能耗。多个节能仓共存时取最优。",
   "config.jade.plugin_gtuf.thread_provider": "[GTUF] Thread Info"

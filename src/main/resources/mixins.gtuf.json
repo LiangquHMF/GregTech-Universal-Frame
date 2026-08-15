@@ -15,6 +15,7 @@
     "GTUFMachineModelMixin",
     "GTUFGlassTooltipMixin",
     "GTUFPatternPreviewTierMixin",
-    "GTUFBlockPatternAccessor"
+    "GTUFBlockPatternAccessor",
+    "GTUF_MultiblockInfoSlotGuardMixin"
   ]
 }

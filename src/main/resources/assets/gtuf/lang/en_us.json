@@ -36,6 +36,7 @@
   "gtuf.multiblock.enhanced_boiler.throttle_modify": "Adjust Throttle",
   "gtuf.recipe.condition.pressure": "Requires Pressure: %s ~ %s",
   "gtuf.pressure_pipe.tolerance": "Tolerance: %s ~ %s",
+  "tagprefix.pipe_normal_pressure": "Normal %s Pressure Pipe",
   "gtuf.machine.pressure_hatch.tooltip": "Pressure Hatch: connects the machine chamber to the pressure pipe network. Does not store pressure, only conducts.",
   "gtuf.machine.energy_saving_hatch.tooltip": "Energy Saving Hatch: reduces recipe energy consumption by %s%%. The best hatch applies when multiple are installed.",
   "config.jade.plugin_gtuf.thread_provider": "[GTUF] Thread Info"
