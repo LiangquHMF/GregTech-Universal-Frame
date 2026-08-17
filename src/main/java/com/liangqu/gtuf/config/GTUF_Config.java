@@ -246,13 +246,13 @@ public final class GTUF_Config {
                         "开启后线程仓可占据任意用 autoAbilities 定义能力位的 GTM 电力多方块的仓室位",
                         "（含 GTM 原生机器，如大型组装厂）。关闭后线程仓只能装入显式声明其能力位的",
                         "GTUF 多方块结构。结构位在游戏内首次结构检查时固化，改动需重启生效。")
-                .define("threadHatchVanillaInjection", true);
+                .define("threadHatchVanillaInjection", false);
         ENERGY_SAVING_HATCH_VANILLA_INJECT = BUILDER
                 .comment("节能仓装入 GTM 原版电力多方块结构位（autoAbilities mixin 注入）。",
                         "开启后节能仓可占据任意用 autoAbilities 定义能力位的 GTM 电力多方块的仓室位",
                         "（含 GTM 原生机器）。关闭后节能仓只能装入显式声明其能力位的 GTUF 多方块结构。",
                         "结构位在游戏内首次结构检查时固化，改动需重启生效。")
-                .define("energySavingHatchVanillaInjection", true);
+                .define("energySavingHatchVanillaInjection", false);
         BUILDER.pop();
 
         BUILDER.comment(" 玻璃等级映射（glass tier）")
