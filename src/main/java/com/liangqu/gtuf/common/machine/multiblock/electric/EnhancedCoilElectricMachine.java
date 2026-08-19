@@ -8,6 +8,8 @@ import com.gregtechceu.gtceu.api.recipe.GTRecipe;
 import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
+import com.gregtechceu.gtceu.api.GTValues;
+import com.gregtechceu.gtceu.api.recipe.RecipeHelper;
 import com.gregtechceu.gtceu.common.data.GTRecipeModifiers;
 
 import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
@@ -170,9 +172,24 @@ public class EnhancedCoilElectricMachine extends CoilWorkableElectricMultiblockM
      * 配方修改器：先并行放大（初始并行 + 线圈额外并行），叠加线圈能耗减免与提速，
      * 最后按创建期选定的过时钟方式 OC（基于调整后的配方计算）。
      * 注册时用 {@code .recipeModifier(EnhancedCoilElectricMachine::recipeModifier, true)} 挂载。
+     *
+     * <p>
+     * 包含温度/等级门控（镜像 {@link GTRecipeModifiers#ebfOverclock}）：对于带 {@code ebf_temp}
+     * 字段的配方（如电力高炉），校验线圈温度和机器等级是否足够；不满足则返回
+     * {@link ModifierFunction#NULL}（配方不启动）。不带 {@code ebf_temp} 的配方跳过此检查。
+     * </p>
      */
     public static ModifierFunction recipeModifier(MetaMachine machine, GTRecipe recipe) {
         if (!(machine instanceof EnhancedCoilElectricMachine coilMachine)) return ModifierFunction.NULL;
+
+        // 温度/等级门控（镜像 GTRecipeModifiers.ebfOverclock，防止低线圈处理高温度配方）
+        if (recipe.data.contains("ebf_temp")) {
+            int blastFurnaceTemperature = coilMachine.getCoilType().getCoilTemperature()
+                    + (100 * Math.max(0, coilMachine.getTier() - GTValues.MV));
+            int recipeTemp = recipe.data.getInt("ebf_temp");
+            if (recipeTemp > blastFurnaceTemperature) return ModifierFunction.NULL;
+            if (RecipeHelper.getRecipeEUtTier(recipe) > coilMachine.getTier()) return ModifierFunction.NULL;
+        }
 
         int parallels = ParallelLogic.getParallelAmount(machine, recipe, coilMachine.getMaxParallel());
         if (parallels == 0) return ModifierFunction.NULL;
@@ -202,6 +219,11 @@ public class EnhancedCoilElectricMachine extends CoilWorkableElectricMultiblockM
     public void addDisplayText(List<Component> textList) {
         super.addDisplayText(textList);
         if (isFormed()) {
+            int blastFurnaceTemperature = getCoilType().getCoilTemperature()
+                    + (100 * Math.max(0, getTier() - GTValues.MV));
+            textList.add(Component.translatable("gtuf.multiblock.coil_temperature",
+                    blastFurnaceTemperature + "K")
+                    .withStyle(ChatFormatting.GOLD));
             textList.add(Component.translatable("gtuf.multiblock.parallel_amount", getMaxParallel())
                     .withStyle(ChatFormatting.GOLD));
             if (speedStep > 0) {

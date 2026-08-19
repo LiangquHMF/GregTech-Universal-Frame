@@ -73,6 +73,13 @@ public class GTUFThreadingLogic {
     /** 每 tick 单类型最多查找的候选配方数（来源 GTNA 的 30）。 */
     private static final int SEARCH_LIMIT = 30;
 
+    /**
+     * 配方立即回收最大重试轮数：阶段 2 for 循环结束后，若有线程在本 tick 完成了配方
+     * （腾出空位），立即再搜一轮补位。此上限防无限循环（每轮都完成一个配方 → 永远不停）。
+     * 正常情况 1~2 轮就够了（每轮最多完成 searchLimit 个配方，空位填满即止）。
+     */
+    private static final int MAX_RECYCLE_ROUNDS = 4;
+
     /** 空闲搜索节流间隔：keepSubscribing()==true 时每 5 tick 才搜索一次新配方（镜像原生 RecipeLogic 空闲分支）。 */
     private static final long IDLE_SEARCH_INTERVAL = 5;
 
@@ -154,12 +161,19 @@ public class GTUFThreadingLogic {
     /**
      * 每 tick 推进：先扣 tick 级输入（EU/t 等），不足则本线程停住不推进；
      * 有空闲线程时搜索并启动新配方；最后维护状态。
+     *
+     * <p>
+     * <b>1tick 配方回收</b>：阶段 1 中完成的配方会腾出空位；阶段 2 的 for 循环结束后，
+     * 若本 tick 有配方完成且仍有空闲线程，立即再搜一轮（最多 {@link #MAX_RECYCLE_ROUNDS} 轮）
+     * 给刚空出的线程补配方——避免 1tick 配方在轮次边界浪费 1 tick。
+     * </p>
      */
     public void serverTick() {
         MetaMachine metaMachine = machine.self();
         if (metaMachine.getLevel() == null || metaMachine.getLevel().isClientSide) return;
 
         // 1) 逐线程推进：先扣 tick 级输入（EU/t 等），不足则该线程本 tick 停住不推进
+        int completedThisTick = 0;
         Iterator<ActiveRecipe> iterator = activeRecipes.iterator();
         while (iterator.hasNext()) {
             ActiveRecipe active = iterator.next();
@@ -174,6 +188,7 @@ public class GTUFThreadingLogic {
             if (active.update()) {
                 completeRecipe(active);
                 iterator.remove();
+                completedThisTick++;
             }
         }
 
@@ -192,10 +207,26 @@ public class GTUFThreadingLogic {
                         : true;
             }
             if (searchNow) {
+                // 基础搜索：一次收集，逐个尝试启动
                 for (GTRecipe candidate : collectPossibleRecipes(SEARCH_LIMIT)) {
                     if (activeRecipes.size() >= getMaxThreads()) break;
                     if (isRecipeAlreadyActive(candidate)) continue;
                     tryStartRecipe(candidate);
+                }
+                // 立即回收：本 tick 有配方完成且仍有空闲线程时，再搜一轮补位。
+                // 1tick 配方在阶段 1 完成 → 腾出空位 → 此处立即补新配方 → 无间隔。
+                // 循环直到：无空位、无新配方、或达到轮数上限（防无限循环）。
+                int rounds = 0;
+                while (completedThisTick > 0
+                        && activeRecipes.size() < getMaxThreads()
+                        && rounds < MAX_RECYCLE_ROUNDS) {
+                    completedThisTick = 0;
+                    for (GTRecipe candidate : collectPossibleRecipes(SEARCH_LIMIT)) {
+                        if (activeRecipes.size() >= getMaxThreads()) break;
+                        if (isRecipeAlreadyActive(candidate)) continue;
+                        tryStartRecipe(candidate);
+                    }
+                    rounds++;
                 }
             }
         }

@@ -18,29 +18,17 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 /**
- * GTUF 配置（config/gtuf-common.toml）。
+ * GTUF config (config/gtuf-common.toml).
  *
- * <p>
- * 配方平衡项分三类：
- * </p>
+ * <p>Balance sections:</p>
  * <ul>
- * <li><b>并行能耗倍率</b>（{@code parallelEutMultiplier}）：并行放大时把 EUt 乘上并行数
- * （能耗随并行线性增长、单件蒸汽/EU 成本恒定），供整合包作者整体调节并行带来的能耗开销——
- * 例如调低让并行更省汽、或设为 0 让并行不增耗能。</li>
- * <li><b>可增强电力机公式倍率</b>（{@code [enhanceableElectric]} 组）：并行倍率、框架能耗
- * 步长、管道时长步长，控制 {@code EnhanceableElectricMachine} 的增强曲线。</li>
- * <li><b>可增强蒸汽机公式倍率</b>（{@code [enhanceableSteam]} 组）：并行倍率、框架速度
- * 步长，控制 {@code EnhanceableSteamMachine} 的增强曲线。</li>
- * <li><b>玻璃等级映射</b>（{@code [glass]} 组）：方块注册名 → 玻璃等级（= 电压等级）的
- * 完整映射，供 {@code GTUF_PatternPredicates.GlassTier} 谓词与玻璃 tooltip 使用。
- * 开放给整合包作者：可新增其他模组的玻璃方块、改默认玻璃等级，或删掉某条目使其不再算玻璃。</li>
- * <li><b>压力系统</b>（{@code [pressure]} 组）：大气压、腔压回归/传导速率、玻璃压力上下限公式
- * 参数、压力管道容限（"材质名=maxKpa:minKpa"）。控制 {@code PressureMultiblockMachine} 的
- * 腔压自变化曲线与玻璃等级对应的腔压上下限，以及各材质的压力管道能承受的压力量程。</li>
- * <li><b>节能仓</b>（{@code [energySaving]} 组）：减免额外倍率与能耗倍率下限，控制
- * {@code EnergySavingHatchPartMachine} 按档位给出的能耗减免曲线。</li>
- * <li><b>仓室与原版多方块结构兼容</b>（{@code [structureCompat]} 组）：线程仓/节能仓能否
- * 装入 GTM 原版电力多方块结构位（autoAbilities mixin 注入）的开关。</li>
+ * <li><b>[parallelEutMultiplier]</b>: EUt = recipe EUt × parallels × this.</li>
+ * <li><b>[enhanceableElectric]</b>: parallel base, frame energy step, pipe speed step for EnhanceableElectricMachine.</li>
+ * <li><b>[enhanceableSteam]</b>: parallel base, frame speed step for EnhanceableSteamMachine.</li>
+ * <li><b>[glass]</b>: block ID → glass tier (voltage tier) mapping for GlassTier predicate.</li>
+ * <li><b>[pressure]</b>: atmospheric pressure, relax/conduction rates, glass pressure bounds, pipe tolerances.</li>
+ * <li><b>[energySaving]</b>: extra multiplier and min multiplier for energy-saving hatch.</li>
+ * <li><b>[structureCompat]</b>: allow thread/energy-saving hatches in vanilla GTM multiblock structure slots.</li>
  * </ul>
  */
 @Mod.EventBusSubscriber(modid = GTUF_Core.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD)
@@ -50,87 +38,88 @@ public final class GTUF_Config {
 
     private static final ForgeConfigSpec.Builder BUILDER = new ForgeConfigSpec.Builder();
 
-    /** 并行能耗倍率：实际 EUt = 配方单次 EUt × 并行数 × 该倍率。默认 1.0（能耗随并行线性增长）。 */
+    /** Parallel EUt multiplier: actual EUt = recipe EUt × parallels × this. Default 1.0. */
     private static final ForgeConfigSpec.DoubleValue PARALLEL_EUT_MULTIPLIER = BUILDER
-            .comment("并行能耗倍率（Parallel EUt Multiplier）",
-                    "实际 EUt = 配方单次 EUt × 并行数 × 该倍率。",
-                    "默认 1.0：能耗随并行数线性增长，单件蒸汽/EU 成本恒定，并行只换吞吐。",
-                    "设为 0.0 可让并行不增耗能（不推荐，等于免费并行）。")
+            .comment("Parallel EUt Multiplier",
+                    "并行能耗倍率：实际 EUt = 配方单次 EUt × 并行数 × 该倍率。",
+                    "Default 1.0: energy scales linearly with parallels.",
+                    "Set to 0.0 for free parallelism (not recommended).")
             .defineInRange("parallelEutMultiplier", 1.0, 0.0, Double.MAX_VALUE);
 
     // ---------------------------------------------------------------
     // 可增强电力多方块机（EnhanceableElectricMachine）公式倍率
     // ---------------------------------------------------------------
 
-    /** 电力机并行倍率（指数底）：最大并行数 = 初始并行数 × 该值^(外壳等级-1)。默认 2.0。 */
+    /** Parallel base (exponential): max parallel = base parallel × this^(casing tier-1). Default 2.0. */
     private static final ForgeConfigSpec.DoubleValue ELECTRIC_PARALLEL_BASE;
-    /** 电力机框架能耗步长：能耗倍率 = 1 - (框架等级-1) × 该值。默认 0.05。 */
+    /** Frame energy step: energy multiplier = 1 - (frame tier-1) × this. Default 0.05. */
     private static final ForgeConfigSpec.DoubleValue ELECTRIC_FRAME_ENERGY_STEP;
-    /** 电力机管道时长步长：时长倍率 = 1 - (管道等级-1) × 该值。默认 0.1。 */
+    /** Pipe speed step: duration multiplier = 1 - (pipe tier-1) × this. Default 0.1. */
     private static final ForgeConfigSpec.DoubleValue ELECTRIC_PIPE_SPEED_STEP;
 
     // ---------------------------------------------------------------
     // 可增强蒸汽多方块机（EnhanceableSteamMachine）公式倍率
     // ---------------------------------------------------------------
 
-    /** 蒸汽机并行倍率（指数底）：最大并行数 = 初始并行数 × 该值^(外壳等级-1)。默认 4.0。 */
+    /** Parallel base (exponential): max parallel = base parallel × this^(casing tier-1). Default 4.0. */
     private static final ForgeConfigSpec.DoubleValue STEAM_PARALLEL_BASE;
-    /** 蒸汽机框架速度步长：实际时长 = 原始时长^(1 - (框架等级-1) × 该值)。默认 0.1。 */
+    /** Frame speed step: actual duration = base^(1 - (frame tier-1) × this). Default 0.1. */
     private static final ForgeConfigSpec.DoubleValue STEAM_FRAME_SPEED_STEP;
 
     // ---------------------------------------------------------------
     // 压力系统（Pressure）
     // ---------------------------------------------------------------
 
-    /** 标准大气压（kPa）。 */
+    /** Standard atmospheric pressure (kPa). */
     private static final ForgeConfigSpec.DoubleValue PRESSURE_ATMOSPHERIC;
-    /** 腔压向大气回归的基准速率（每 tick 比例），除以外壳等级。 */
+    /** Chamber pressure relax base rate (kPa/tick), divided by casing tier. */
     private static final ForgeConfigSpec.DoubleValue PRESSURE_RELAX_BASE_RATE_KPA;
-    /** 玻璃下限基准（kPa）：min = max(0.1, base - (tier-1)*step)。 */
+    /** Glass min pressure base (kPa): min = max(0.1, base - (tier-1)×step). */
     private static final ForgeConfigSpec.DoubleValue PRESSURE_GLASS_MIN_BASE;
-    /** 玻璃下限步长（kPa）：每级玻璃等级放宽下限的量。 */
+    /** Glass min pressure step (kPa): lowered per glass tier. */
     private static final ForgeConfigSpec.DoubleValue PRESSURE_GLASS_MIN_STEP;
-    /** 玻璃上限基准（kPa）：max = base + (tier-1)*step。 */
+    /** Glass max pressure base (kPa): max = base + (tier-1)×step. */
     private static final ForgeConfigSpec.DoubleValue PRESSURE_GLASS_MAX_BASE;
-    /** 玻璃上限步长（kPa）：每级玻璃等级放宽上限的量。 */
+    /** Glass max pressure step (kPa): raised per glass tier. */
     private static final ForgeConfigSpec.DoubleValue PRESSURE_GLASS_MAX_STEP;
-    /** 腔压向组均值均衡的速率（每 4 tick 比例）。 */
+    /** Conduction rate: pressure equalizes toward group mean every 4 ticks. */
     private static final ForgeConfigSpec.DoubleValue PRESSURE_CONDUCTION_RATE;
-    /** 压力管道容限条目（格式 {@code "材质名=maxKpa:minKpa"}）。 */
+    /** Pressure pipe tolerance entries ("material=maxKpa:minKpa"). */
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> PRESSURE_PIPE_TOLERANCES_CONFIG;
 
     // ---------------------------------------------------------------
     // 节能仓（Energy Saving Hatch）
     // ---------------------------------------------------------------
 
-    /** 节能仓减免额外倍率：能耗倍率 = max(minMultiplier, (100 - 5 × 档位差 × 该值) / 100)。 */
+    /** Energy saving extra multiplier: rate = max(min, (100 - 5 × tier diff × this) / 100). */
     private static final ForgeConfigSpec.DoubleValue ENERGY_SAVING_EXTRA_MULTIPLIER;
-    /** 节能仓能耗倍率下限（防减免到 0/负）。 */
+    /** Energy saving min multiplier floor (prevents 0 or negative EUt). */
     private static final ForgeConfigSpec.DoubleValue ENERGY_SAVING_MIN_MULTIPLIER;
+
+    // ---------------------------------------------------------------
+    // 线程仓（threading）
+    // ---------------------------------------------------------------
+
+    /** Thread hatch minimum voltage tier. */
+    private static final ForgeConfigSpec.IntValue THREAD_HATCH_MIN_TIER;
 
     // ---------------------------------------------------------------
     // 仓室与原版多方块结构兼容（structureCompat）
     // ---------------------------------------------------------------
 
-    /** 线程仓装入 GTM 原版电力多方块结构位（autoAbilities mixin 注入）。 */
+    /** Allow thread hatches in vanilla GTM multiblock structure slots (autoAbilities mixin). */
     private static final ForgeConfigSpec.BooleanValue THREAD_HATCH_VANILLA_INJECT;
-    /** 节能仓装入 GTM 原版电力多方块结构位（autoAbilities mixin 注入）。 */
+    /** Allow energy-saving hatches in vanilla GTM multiblock structure slots (autoAbilities mixin). */
     private static final ForgeConfigSpec.BooleanValue ENERGY_SAVING_HATCH_VANILLA_INJECT;
 
-    /**
-     * 内置默认压力管道容限（"材质名=maxKpa:minKpa"，单位 kPa）。
-     * bronze/steel/titanium/tungstensteel 与 GTM 材质注册名一致（小写）。
-     */
+    /** Default pressure pipe tolerances ("material=maxKpa:minKpa", kPa). Material names match GTM registry. */
     public static final List<String> DEFAULT_PRESSURE_PIPE_TOLERANCES = List.of(
             "bronze=3000:10",
             "steel=6000:10",
             "titanium=12000:5",
-            "tungstensteel=24000:5");
+            "tungsten_steel=24000:5");
 
-    /**
-     * 当前生效的压力管道容限（材质名 → {@link PressurePipeProperties}），
-     * config 加载/重载时原地刷新。字段初始化即填入内置默认值，保证 config 加载前的读取拿到默认映射。
-     */
+    /** Active pipe tolerances (material → properties); refreshed on config load. Pre-filled with defaults. */
     private static final Map<String, PressurePipeProperties> pressurePipeTolerances = parsePressurePipeTolerances(
             DEFAULT_PRESSURE_PIPE_TOLERANCES);
 
@@ -138,7 +127,7 @@ public final class GTUF_Config {
     // 玻璃等级映射（glass tier）
     // ---------------------------------------------------------------
 
-    /** 内置默认玻璃等级映射（九压标准：玻璃等级 = 电压等级，ULV=1/LV=2/…/UV=9）。 */
+    /** Default glass tier mapping (voltage tier: ULV=1/LV=2/.../UV=9). */
     public static final List<String> DEFAULT_GLASS_TIERS = List.of(
             "minecraft:glass=1",
             "minecraft:tinted_glass=2",
@@ -147,122 +136,122 @@ public final class GTUF_Config {
             "gtceu:laminated_glass=5",
             "gtceu:fusion_glass=7");
 
-    /** config 玻璃等级条目（格式 {@code "注册名=等级"}）。 */
+    /** Config glass tier entries ("registryName=tier"). */
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> GLASS_TIERS_CONFIG;
 
-    /**
-     * 当前生效的玻璃等级映射（config 加载/重载时原地刷新，外部 {@code GLASS_TIERS} 引用恒可见最新值）。
-     * 字段初始化即填入内置默认值，保证 config 加载前的读取（如机器注册期）也拿到完整默认映射。
-     */
+    /** Active glass tier mapping (block ID → tier); refreshed on config load. Pre-filled with defaults. */
     private static final Map<String, Integer> glassTiers = parseGlassTiers(DEFAULT_GLASS_TIERS);
 
     static {
-        BUILDER.comment(" EnhanceableElectricMachine 的公式倍率")
+        BUILDER.comment(" EnhanceableElectricMachine formula multipliers")
                 .push("enhanceableElectric");
         ELECTRIC_PARALLEL_BASE = BUILDER
-                .comment("并行倍率（指数底）：最大并行数 = 初始并行数 × 该值^(外壳等级-1)。",
-                        "默认 2.0：钢=初始×1、铝=初始×2、不锈钢=初始×4、钛=初始×8、钨钢=初始×16。")
+                .comment("Parallel base (exponential): max = base × this^(casing tier-1).",
+                        "Default 2.0: Steel=×1, Al=×2, SS=×4, Ti=×8, TungstenSteel=×16.")
                 .defineInRange("parallelBase", 2.0, 1.0, 64.0);
         ELECTRIC_FRAME_ENERGY_STEP = BUILDER
-                .comment("框架能耗步长：能耗倍率 = 1 - (框架等级-1) × 该值（下限 0）。",
-                        "默认 0.05：钢=100%、铝=95%、不锈钢=90%、钛=85%、钨钢=80%。")
+                .comment("Frame energy step: energy mult = 1 - (frame tier-1) × this (floor 0).",
+                        "Default 0.05: Steel=100%, Al=95%, SS=90%, Ti=85%, TungstenSteel=80%.")
                 .defineInRange("frameEnergyStep", 0.05, 0.0, 1.0);
         ELECTRIC_PIPE_SPEED_STEP = BUILDER
-                .comment("管道时长步长：时长倍率 = 1 - (管道等级-1) × 该值（下限 0）。",
-                        "默认 0.1：青铜=100%、钢=90%、钛=70%、钨钢=60%。")
+                .comment("Pipe speed step: duration mult = 1 - (pipe tier-1) × this (floor 0).",
+                        "Default 0.1: Bronze=100%, Steel=90%, Ti=70%, TungstenSteel=60%.")
                 .defineInRange("pipeSpeedStep", 0.1, 0.0, 1.0);
         BUILDER.pop();
 
-        BUILDER.comment(" EnhanceableSteamMachine 的公式倍率")
+        BUILDER.comment(" EnhanceableSteamMachine formula multipliers")
                 .push("enhanceableSteam");
         STEAM_PARALLEL_BASE = BUILDER
-                .comment("并行倍率（指数底）：最大并行数 = 初始并行数 × 该值^(外壳等级-1)。",
-                        "默认 4.0：青铜=初始×1、脱氧钢=初始×4。")
+                .comment("Parallel base (exponential): max = base × this^(casing tier-1).",
+                        "Default 4.0: Bronze=×1, Steel=×4.")
                 .defineInRange("parallelBase", 4.0, 1.0, 64.0);
         STEAM_FRAME_SPEED_STEP = BUILDER
-                .comment("框架速度步长：实际时长 = 原始时长^(1 - (框架等级-1) × 该值)。",
-                        "默认 0.1：青铜（等级1）=原始时长、钢（等级2）=原始时长^0.9。")
+                .comment("Frame speed step: duration = base^(1 - (frame tier-1) × this).",
+                        "Default 0.1: Bronze(1)=base, Steel(2)=base^0.9.")
                 .defineInRange("frameSpeedStep", 0.1, 0.0, 1.0);
         BUILDER.pop();
 
-        BUILDER.comment(" 压力系统（Pressure）：单位 kPa，1 大气压 = 101.325 kPa")
+        BUILDER.comment(" Pressure system: unit kPa, 1 atm = 101.325 kPa")
                 .push("pressure");
         PRESSURE_ATMOSPHERIC = BUILDER
-                .comment("标准大气压（kPa）。也是腔压自变化公式的收敛目标：",
-                        "腔压高于/低于该值都会向它回归，速率见 relaxBaseRateKpa。")
+                .comment("Standard atmospheric pressure (kPa). Chamber pressure relaxes toward this.",
+                        "标准大气压（kPa），腔压收敛目标。")
                 .defineInRange("atmosphericPressure", 101.325, 0.1, 1.0E9);
         PRESSURE_RELAX_BASE_RATE_KPA = BUILDER
-                .comment("腔压向大气回归的恒定绝对速率（kPa/tick），除以外壳等级：",
-                        "relaxRate = relaxBaseRateKpa / casingTier。",
-                        "恒定绝对速率：无论偏离多少每 tick 固定掉该量（钳制到大气压不再越过），",
-                        "比指数比例衰减更易维持超高压（高压时掉速不再随偏离暴涨）。",
-                        "外壳等级越高速率参数越小（高级外壳回归越慢，更稳定）。")
+                .comment("Chamber pressure relax base rate (kPa/tick), divided by casing tier.",
+                        "Constant absolute rate: drops this amount per tick regardless of deviation,",
+                        "clamped to atmospheric. Higher casing tier → slower relax → more stable.")
                 .defineInRange("relaxBaseRateKpa", 1.0E-1, 1.0E-6, 1.0E9);
         PRESSURE_GLASS_MIN_BASE = BUILDER
-                .comment("玻璃压力下限基准（kPa）：min = max(0.1, base - (玻璃等级-1) × step)。")
+                .comment("Glass min pressure base (kPa): min = max(0.1, base - (glass tier-1) × step).")
                 .defineInRange("glassMinBaseKpa", 50.0, 0.1, 1.0E9);
         PRESSURE_GLASS_MIN_STEP = BUILDER
-                .comment("玻璃压力下限步长（kPa）：玻璃等级每 +1，压力下限再放宽该量。",
-                        "玻璃等级越高压力下限越低。")
+                .comment("Glass min pressure step (kPa): each glass tier lowers the min by this amount.")
                 .defineInRange("glassMinStep", 10.0, 0.0, 1.0E9);
         PRESSURE_GLASS_MAX_BASE = BUILDER
-                .comment("玻璃压力上限基准（kPa）：max = base + (玻璃等级-1) × step。")
+                .comment("Glass max pressure base (kPa): max = base + (glass tier-1) × step.")
                 .defineInRange("glassMaxBaseKpa", 400.0, 0.1, 1.0E9);
         PRESSURE_GLASS_MAX_STEP = BUILDER
-                .comment("玻璃压力上限步长（kPa）：玻璃等级每 +1，压力上限再放宽该量。",
-                        "玻璃等级越高压力上限越高。")
+                .comment("Glass max pressure step (kPa): each glass tier raises the max by this amount.")
                 .defineInRange("glassMaxStep", 200.0, 0.0, 1.0E9);
         PRESSURE_CONDUCTION_RATE = BUILDER
-                .comment("腔压经管道向同组均值均衡的速率（每 4 tick 比例）：",
-                        "p += (组均值 - p) × conductionRate。")
+                .comment("Conduction rate: pressure equalizes toward group mean every 4 ticks.",
+                        "p += (group mean - p) × conductionRate.")
                 .defineInRange("conductionRate", 0.05, 0.0, 1.0);
         PRESSURE_PIPE_TOLERANCES_CONFIG = BUILDER
-                .comment("压力管道容限：\"材质名=maxKpa:minKpa\" 列表（单位 kPa）。",
-                        "材质名用小写英文（如 bronze/steel/titanium/tungstensteel），须与 GTM 材质注册名一致；",
-                        "解析失败的条目会被跳过并在日志记录。",
-                        "带该属性的材质会生成压力管道，管道超压/欠压（腔压超过 [min,max]）会破裂。")
+                .comment("Pressure pipe tolerances: \"material=maxKpa:minKpa\" list (kPa).",
+                        "Material name must match GTM registry (lowercase, e.g. bronze/steel/titanium/tungstensteel).",
+                        "Invalid entries are skipped and logged. Pipes burst if pressure exceeds [min,max].")
                 .defineListAllowEmpty("pressurePipeTolerances", DEFAULT_PRESSURE_PIPE_TOLERANCES,
                         element -> element instanceof String s && s.contains("="));
         BUILDER.pop();
 
-        BUILDER.comment(" 节能仓（energy saving hatch）")
+        BUILDER.comment(" Energy saving hatch")
                 .push("energySaving");
         ENERGY_SAVING_EXTRA_MULTIPLIER = BUILDER
-                .comment("节能仓减免额外倍率：能耗倍率 = max(minMultiplier, (100 - 5 × 档位差 × 该值) / 100)。",
-                        "档位差从 LV 起算 1（LV=1、MV=2、HV=3、EV=4…）。",
-                        "默认 1.0：LV=95%、MV=90%、HV=85%、EV=80%…每级多减免 5%。",
-                        "调大让高等级仓减免更多（如 2.0：LV=90%、MV=80%…）。")
+                .comment("Extra multiplier: rate = max(min, (100 - 5 × tier diff × this) / 100).",
+                        "Tier diff starts at LV=1, MV=2, HV=3, EV=4...",
+                        "Default 1.0: LV=95%, MV=90%, HV=85%, EV=80% (-5% per tier).",
+                        "Increase to boost high-tier discount (e.g. 2.0: LV=90%, MV=80%...).")
                 .defineInRange("extraMultiplier", 1.0, 0.0, Double.MAX_VALUE);
         ENERGY_SAVING_MIN_MULTIPLIER = BUILDER
-                .comment("节能仓能耗倍率下限（防减免到 0/负）：能耗倍率最低为该值。",
-                        "默认 0.05 = 5%（再高的仓也不会让配方完全免费）。")
+                .comment("Energy rate floor (prevents 0 or negative EUt).",
+                        "Default 0.05 = 5% (recipes can never be fully free).")
                 .defineInRange("minMultiplier", 0.05, 0.01, 1.0);
         BUILDER.pop();
 
-        BUILDER.comment(" 仓室与原版多方块结构兼容（mixin 注入）")
+        BUILDER.comment(" Thread hatch")
+                .push("threading");
+        THREAD_HATCH_MIN_TIER = BUILDER
+                .comment("Minimum voltage tier for thread hatches.",
+                        "Default: 6 = LuV. Thread hatches below this tier cannot be crafted.",
+                        "Tier values: 1=ULV, 2=LV, 3=MV, 4=HV, 5=EV, 6=LuV, 7=UV, 8=UHV, 9=UEV, 10=UIV, 11=UXV, 12=OpV, 13=MAX.")
+                .defineInRange("minTier", 6, 1, 13);
+        BUILDER.pop();
+
+        BUILDER.comment(" Structure compatibility with vanilla GTM multiblocks (mixin injection)")
                 .push("structureCompat");
         THREAD_HATCH_VANILLA_INJECT = BUILDER
-                .comment("线程仓装入 GTM 原版电力多方块结构位（autoAbilities mixin 注入）。",
-                        "开启后线程仓可占据任意用 autoAbilities 定义能力位的 GTM 电力多方块的仓室位",
-                        "（含 GTM 原生机器，如大型组装厂）。关闭后线程仓只能装入显式声明其能力位的",
-                        "GTUF 多方块结构。结构位在游戏内首次结构检查时固化，改动需重启生效。")
+                .comment("Allow thread hatches in vanilla GTM multiblock structure slots (autoAbilities mixin).",
+                        "When on, thread hatches can fill any autoAbilities-defined slot in GTM electric multis",
+                        "(incl. vanilla machines like Large Assembler). Off: only GTUF multis that explicitly",
+                        "declare the slot. Structure slots are locked on first formation; restart to apply.")
                 .define("threadHatchVanillaInjection", false);
         ENERGY_SAVING_HATCH_VANILLA_INJECT = BUILDER
-                .comment("节能仓装入 GTM 原版电力多方块结构位（autoAbilities mixin 注入）。",
-                        "开启后节能仓可占据任意用 autoAbilities 定义能力位的 GTM 电力多方块的仓室位",
-                        "（含 GTM 原生机器）。关闭后节能仓只能装入显式声明其能力位的 GTUF 多方块结构。",
-                        "结构位在游戏内首次结构检查时固化，改动需重启生效。")
+                .comment("Allow energy-saving hatches in vanilla GTM multiblock structure slots (autoAbilities mixin).",
+                        "When on, energy-saving hatches can fill any autoAbilities-defined slot in GTM electric multis.",
+                        "Off: only GTUF multis that explicitly declare the slot.",
+                        "Structure slots are locked on first formation; restart to apply.")
                 .define("energySavingHatchVanillaInjection", false);
         BUILDER.pop();
 
-        BUILDER.comment(" 玻璃等级映射（glass tier）")
+        BUILDER.comment(" Glass tier mapping")
                 .push("glass");
         GLASS_TIERS_CONFIG = BUILDER
-                .comment("玻璃等级映射：\"注册名=等级\" 列表。等级为电压等级（九压标准 ULV=1/LV=2/…/UV=9）。",
-                        "默认值 = GTUF 内置六个玻璃；整合包可新增其他模组的玻璃方块",
-                        "（如 \"chisel:glass=1\"），或修改/删除条目改变或禁用某玻璃。",
-                        "条目按注册名匹配（\"modid:block\"），解析失败的条目会被跳过并在日志记录。",
-                        "改等级工具提示里的电压名越界（>9）时会降级为不显示而非崩溃。")
+                .comment("Glass tier mapping: \"registryName=tier\" list. Tier = voltage tier (ULV=1/LV=2/.../UV=9).",
+                        "Defaults: 6 built-in glasses. Add other mod glasses (e.g. \"chisel:glass=1\"),",
+                        "modify or remove entries to change/disable. Invalid entries skipped and logged.",
+                        "Out-of-range tier (>9) in tooltip gracefully hides the voltage name.")
                 .defineListAllowEmpty("glassTiers", DEFAULT_GLASS_TIERS,
                         element -> element instanceof String s && s.contains("="));
         BUILDER.pop();
@@ -285,134 +274,138 @@ public final class GTUF_Config {
     private static double pressureConductionRate = 0.05;
     private static double energySavingExtraMultiplier = 1.0;
     private static double energySavingMinMultiplier = 0.05;
+    private static int threadHatchMinTier = 6;
     private static boolean threadHatchVanillaInjection = true;
     private static boolean energySavingHatchVanillaInjection = true;
 
     private GTUF_Config() {}
 
-    /** 当前并行能耗倍率（供配方处理逻辑读取）。 */
+    /** Current parallel EUt multiplier. */
     public static double getParallelEutMultiplier() {
         return parallelEutMultiplier;
     }
 
-    /** 电力机并行倍率（指数底）。 */
+    /** Electric machine parallel base (exponential). */
     public static double getElectricParallelBase() {
         return electricParallelBase;
     }
 
-    /** 电力机框架能耗步长。 */
+    /** Electric machine frame energy step. */
     public static double getElectricFrameEnergyStep() {
         return electricFrameEnergyStep;
     }
 
-    /** 电力机管道时长步长。 */
+    /** Electric machine pipe speed step. */
     public static double getElectricPipeSpeedStep() {
         return electricPipeSpeedStep;
     }
 
-    /** 蒸汽机并行倍率（指数底）。 */
+    /** Steam machine parallel base (exponential). */
     public static double getSteamParallelBase() {
         return steamParallelBase;
     }
 
-    /** 蒸汽机框架速度步长。 */
+    /** Steam machine frame speed step. */
     public static double getSteamFrameSpeedStep() {
         return steamFrameSpeedStep;
     }
 
-    /** 标准大气压（kPa），也是腔压自变化公式的收敛目标。 */
+    /** Atmospheric pressure (kPa); chamber pressure relaxes toward this. */
     public static double getPressureAtmospheric() {
         return pressureAtmospheric;
     }
 
-    /** 腔压向大气回归的恒定绝对速率（kPa/tick，再除以外壳等级）。 */
+    /** Chamber pressure relax base rate (kPa/tick), divided by casing tier. */
     public static double getPressureRelaxBaseRateKpa() {
         return pressureRelaxBaseRateKpa;
     }
 
-    /** 玻璃压力下限基准（kPa）。 */
+    /** Glass min pressure base (kPa). */
     public static double getPressureGlassMinBaseKpa() {
         return pressureGlassMinBaseKpa;
     }
 
-    /** 玻璃压力下限步长（kPa）。 */
+    /** Glass min pressure step (kPa). */
     public static double getPressureGlassMinStep() {
         return pressureGlassMinStep;
     }
 
-    /** 玻璃压力上限基准（kPa）。 */
+    /** Glass max pressure base (kPa). */
     public static double getPressureGlassMaxBaseKpa() {
         return pressureGlassMaxBaseKpa;
     }
 
-    /** 玻璃压力上限步长（kPa）。 */
+    /** Glass max pressure step (kPa). */
     public static double getPressureGlassMaxStep() {
         return pressureGlassMaxStep;
     }
 
-    /** 腔压向同组均值均衡的速率（每 4 tick 比例）。 */
+    /** Conduction rate: equalizes toward group mean every 4 ticks. */
     public static double getPressureConductionRate() {
         return pressureConductionRate;
     }
 
-    /** 节能仓减免额外倍率（乘在 "-5% × 档位差" 上）。 */
+    /** Energy saving extra multiplier. */
     public static double getEnergySavingExtraMultiplier() {
         return energySavingExtraMultiplier;
     }
 
-    /** 节能仓能耗倍率下限（防减免到 0/负）。 */
+    /** Energy saving min multiplier floor. */
     public static double getEnergySavingMinMultiplier() {
         return energySavingMinMultiplier;
     }
 
-    /** 线程仓能否装入 GTM 原版电力多方块结构位（autoAbilities mixin 注入）。 */
+    /** Thread hatch minimum voltage tier. */
+    public static int getThreadHatchMinTier() {
+        return threadHatchMinTier;
+    }
+
+    /** Whether thread hatches can fill vanilla GTM multiblock slots. */
     public static boolean isThreadHatchVanillaInjection() {
         return threadHatchVanillaInjection;
     }
 
-    /** 节能仓能否装入 GTM 原版电力多方块结构位（autoAbilities mixin 注入）。 */
+    /** Whether energy-saving hatches can fill vanilla GTM multiblock slots. */
     public static boolean isEnergySavingHatchVanillaInjection() {
         return energySavingHatchVanillaInjection;
     }
 
-    /** 查询某材质（小写英文名，如 "bronze"）的压力管道容限；未配置返回 null。 */
+    /** Query pipe tolerance for a material name (lowercase); null if not configured. */
     @Nullable
     public static PressurePipeProperties getPressurePipeTolerance(String materialName) {
         return pressurePipeTolerances.get(materialName);
     }
 
     /**
-     * 当前压力管道容限映射（材质名 → 容限属性）。返回的 map 是运行期共享实例，
-     * config 重载时在内部原地刷新；注意运行期重载不会回头改已 attach 到材质上的旧属性对象，
-     * 压力管道容限改动需重启生效（重新生成管道方块）。
+     * Active pipe tolerance map (material → properties). Shared instance, refreshed on config reload.
+     * Runtime reload does NOT retroactively update already-attached material properties; restart required.
      */
     public static Map<String, PressurePipeProperties> getPressurePipeTolerances() {
         return pressurePipeTolerances;
     }
 
     /**
-     * 当前玻璃等级映射（方块注册名 → 等级）。返回的 map 是运行期共享实例，
-     * config 重载时在内部原地刷新，持有该引用者（如 {@code GTUF_PatternPredicates.GLASS_TIERS}）
-     * 无需重新获取即可看到最新值。
+     * Active glass tier map (block ID → tier). Shared instance, refreshed on config reload.
+     * Holders (e.g. GTUF_PatternPredicates.GLASS_TIERS) see updates without re-fetching.
      */
     public static Map<String, Integer> getGlassTiers() {
         return glassTiers;
     }
 
-    /** 查询某方块注册名的玻璃等级；未纳入映射返回 null。 */
+    /** Query glass tier for a block registry name; null if not in mapping. */
     @Nullable
     public static Integer getGlassTier(String blockId) {
         return glassTiers.get(blockId);
     }
 
-    /** 配置规格，由 {@code GTUF_Core} 构造期注册。 */
+    /** Config spec, registered by GTUF_Core during construction. */
     public static ForgeConfigSpec spec() {
         return SPEC;
     }
 
     @SubscribeEvent
     static void onLoad(final ModConfigEvent event) {
-        // ModConfigEvent 涵盖初次加载与运行中重载，两者都需刷新缓存值。
+        // Covers both initial load and runtime reload.
         if (event.getConfig().getSpec() == SPEC) {
             parallelEutMultiplier = PARALLEL_EUT_MULTIPLIER.get();
             electricParallelBase = ELECTRIC_PARALLEL_BASE.get();
@@ -429,6 +422,7 @@ public final class GTUF_Config {
             pressureConductionRate = PRESSURE_CONDUCTION_RATE.get();
             energySavingExtraMultiplier = ENERGY_SAVING_EXTRA_MULTIPLIER.get();
             energySavingMinMultiplier = ENERGY_SAVING_MIN_MULTIPLIER.get();
+            threadHatchMinTier = THREAD_HATCH_MIN_TIER.get();
             threadHatchVanillaInjection = THREAD_HATCH_VANILLA_INJECT.get();
             energySavingHatchVanillaInjection = ENERGY_SAVING_HATCH_VANILLA_INJECT.get();
             pressurePipeTolerances.clear();
@@ -438,10 +432,7 @@ public final class GTUF_Config {
         }
     }
 
-    /**
-     * 解析 {@code glassTiers} 配置条目（"{@code 注册名=等级}"）为映射。
-     * 格式错误的条目逐个跳过并记录日志——单个条目写错不会让整份映射丢失。
-     */
+    /** Parse "registryName=tier" entries into a map. Invalid entries are skipped and logged. */
     private static Map<String, Integer> parseGlassTiers(List<? extends String> entries) {
         Map<String, Integer> parsed = new LinkedHashMap<>();
         for (String entry : entries) {
@@ -469,9 +460,8 @@ public final class GTUF_Config {
     }
 
     /**
-     * 解析 {@code pressurePipeTolerances} 配置条目（"{@code 材质名=maxKpa:minKpa}"）为
-     * 材质名 → 容限属性映射。格式错误的条目逐个跳过并记录日志——单个条目写错不会让整份映射丢失。
-     * 校验：max 须 > 0、min 须 >= 0 且 min < max（min==max 无意义，min 高于 max 是反的）。
+     * Parse "material=maxKpa:minKpa" entries into a map. Invalid entries skipped and logged.
+     * Validation: max > 0, min >= 0, min < max.
      */
     private static Map<String, PressurePipeProperties> parsePressurePipeTolerances(List<? extends String> entries) {
         Map<String, PressurePipeProperties> parsed = new LinkedHashMap<>();

@@ -14,6 +14,7 @@ import com.lowdragmc.lowdraglib.syncdata.field.ManagedFieldHolder;
 
 import com.liangqu.gtuf.api.machine.IThreadModifierMachine;
 import com.liangqu.gtuf.common.machine.trait.GTUFThreadRegistry;
+import com.liangqu.gtuf.config.GTUF_Config;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -50,7 +51,8 @@ public class ThreadHatchPartMachine extends TieredPartMachine {
 
     public ThreadHatchPartMachine(IMachineBlockEntity holder, int tier, Object... args) {
         super(holder, tier);
-        this.maxThreads = 1L << (tier - GTValues.LuV);
+        int minTier = GTUF_Config.getThreadHatchMinTier();
+        this.maxThreads = tier >= minTier ? 1L << (tier - minTier) : 1;
     }
 
     public int getCurrentThread() {

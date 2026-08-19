@@ -30,6 +30,7 @@ import com.liangqu.gtuf.common.machine.multiblock.part.EnhancedParallelHatchPart
 import com.liangqu.gtuf.common.machine.multiblock.part.IndustrialSteamHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.PressureHatchPartMachine;
 import com.liangqu.gtuf.common.machine.multiblock.part.ThreadHatchPartMachine;
+import com.liangqu.gtuf.config.GTUF_Config;
 
 import java.util.EnumMap;
 import java.util.HashMap;
@@ -233,16 +234,17 @@ public class GTUF_Machines {
     }
 
     /**
-     * 注册线程仓（缺省 UV~MAX 七级）：线程数上限 = 2^(tier-LuV)，
-     * 即 UV=4, UHV=8, UEV=16, UIV=32, UXV=64, OpV=128, MAX=256。GUI 中可调 1~上限，默认 1。
+     * 注册线程仓（缺省 UV~MAX 七级）：线程数上限 = 2^(tier-minTier)，
+     * minTier 由 config {@code [threading].minTier} 控制（默认 LuV=6）。
+     * UV=4, UHV=8, UEV=16, UIV=32, UXV=64, OpV=128, MAX=256。GUI 中可调 1~上限，默认 1。
      * 安装该仓室的多方块通过 {@link com.liangqu.gtuf.api.machine.IThreadModifierMachine} 读取
      * 当前线程数，可同时处理多类配方（配合多线程控制器
      * {@code com.liangqu.gtuf.common.machine.multiblock.electric.MultiThreadElectricMachine}）。
      *
      * <p>
-     * 公式 {@code 2^(tier-LuV)} 与 GUI 配置模型来源：GTOcore
-     * {@code ThreadHatchPartMachine}（{@code super(holder, tier, 1, 1L << (tier - LuV))}，
-     * 下限 1、上限 2^(tier-LuV)）。
+     * 公式 {@code 2^(tier-minTier)} 与 GUI 配置模型来源：GTOcore
+     * {@code ThreadHatchPartMachine}（{@code super(holder, tier, 1, 1L << (tier - minTier))}，
+     * 下限 1、上限 2^(tier-minTier)）。
      * </p>
      *
      * <p>
@@ -259,10 +261,11 @@ public class GTUF_Machines {
         if (tiers.length == 0) {
             tiers = DEFAULT_THREAD_HATCH_TIERS;
         }
+        int minTier = GTUF_Config.getThreadHatchMinTier();
         for (int tier : tiers) {
-            if (tier < GTValues.LuV) {
+            if (tier < minTier) {
                 throw new IllegalArgumentException(
-                        "线程仓仅支持 LuV~MAX（tier " + GTValues.LuV + "~" + GTValues.MAX + "），收到 " + tier);
+                        "线程仓仅支持 " + GTValues.VN[minTier] + "~MAX（tier " + minTier + "~" + GTValues.MAX + "），收到 " + tier);
             }
         }
         return GTMachineUtils.registerTieredMachines(
@@ -277,7 +280,7 @@ public class GTUF_Machines {
                         .model(GTUFModels.createTieredHullMachineModel(
                                 GTCEu.id("block/machines/parallel_hatch_mk4")))
                         .tooltips(Component.translatable("gtuf.machine.thread_hatch.tooltip",
-                                1 << (tier - GTValues.LuV)))
+                                tier >= minTier ? 1L << (tier - minTier) : 1))
                         .register(),
                 tiers);
     }

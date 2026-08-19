@@ -14,6 +14,7 @@
   "gtuf.multiblock.pattern.error.glass": "所有的玻璃方块必须是同一等级",
   "gtuf.multiblock.pattern.error.glass.min": "玻璃等级过低，需要更高级玻璃",
   "gtuf.multiblock.coil_tier": "线圈等级: %s",
+  "gtuf.multiblock.coil_temperature": "线圈温度: %s",
   "gtuf.multiblock.oc_mode": "过时钟: %s",
   "gtuf.multiblock.oc_mode.perfect": "完美",
   "gtuf.multiblock.oc_mode.non_perfect": "非完美",
