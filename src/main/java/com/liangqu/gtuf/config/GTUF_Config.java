@@ -10,20 +10,25 @@ import com.liangqu.gtuf.api.data.material.PressurePipeProperties;
 import com.mojang.logging.LogUtils;
 import org.slf4j.Logger;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
 /**
  * GTUF config (config/gtuf-common.toml).
  *
- * <p>Balance sections:</p>
+ * <p>
+ * Balance sections:
+ * </p>
  * <ul>
  * <li><b>[parallelEutMultiplier]</b>: EUt = recipe EUt × parallels × this.</li>
- * <li><b>[enhanceableElectric]</b>: parallel base, frame energy step, pipe speed step for EnhanceableElectricMachine.</li>
+ * <li><b>[enhanceableElectric]</b>: parallel base, frame energy step, pipe speed step for
+ * EnhanceableElectricMachine.</li>
  * <li><b>[enhanceableSteam]</b>: parallel base, frame speed step for EnhanceableSteamMachine.</li>
  * <li><b>[glass]</b>: block ID → glass tier (voltage tier) mapping for GlassTier predicate.</li>
  * <li><b>[pressure]</b>: atmospheric pressure, relax/conduction rates, glass pressure bounds, pipe tolerances.</li>
@@ -111,6 +116,8 @@ public final class GTUF_Config {
     private static final ForgeConfigSpec.BooleanValue THREAD_HATCH_VANILLA_INJECT;
     /** Allow energy-saving hatches in vanilla GTM multiblock structure slots (autoAbilities mixin). */
     private static final ForgeConfigSpec.BooleanValue ENERGY_SAVING_HATCH_VANILLA_INJECT;
+    /** Machine ID whitelist for structure injection (empty = all machines). */
+    private static ForgeConfigSpec.ConfigValue<List<? extends String>> STRUCTURE_COMPAT_MACHINE_WHITELIST;
 
     /** Default pressure pipe tolerances ("material=maxKpa:minKpa", kPa). Material names match GTM registry. */
     public static final List<String> DEFAULT_PRESSURE_PIPE_TOLERANCES = List.of(
@@ -243,6 +250,15 @@ public final class GTUF_Config {
                         "Off: only GTUF multis that explicitly declare the slot.",
                         "Structure slots are locked on first formation; restart to apply.")
                 .define("energySavingHatchVanillaInjection", false);
+        STRUCTURE_COMPAT_MACHINE_WHITELIST = BUILDER
+                .comment("Machine ID whitelist for structure injection.",
+                        "List of machine registry IDs (e.g. \"gtceu:large_assembler\") that get the thread/energy-saving",
+                        "hatch structure injection. Empty = ALL electric GTM multis (the two booleans above are the",
+                        "only gates). Non-empty = ONLY the listed machine IDs.",
+                        "Machine IDs must be \"namespace:path\" (ResourceLocation format). Invalid entries are",
+                        "skipped and logged. Structure slots are locked on first formation; restart to apply.")
+                .defineListAllowEmpty("machineWhitelist", List.of(),
+                        element -> element instanceof String s && s.contains(":"));
         BUILDER.pop();
 
         BUILDER.comment(" Glass tier mapping")
@@ -277,6 +293,8 @@ public final class GTUF_Config {
     private static int threadHatchMinTier = 6;
     private static boolean threadHatchVanillaInjection = true;
     private static boolean energySavingHatchVanillaInjection = true;
+    /** Active machine ID whitelist (lowercase "namespace:path"). Empty set = all machines allowed. */
+    private static Set<String> structureCompatMachineWhitelist = Set.of();
 
     private GTUF_Config() {}
 
@@ -370,6 +388,15 @@ public final class GTUF_Config {
         return energySavingHatchVanillaInjection;
     }
 
+    /**
+     * Whether a machine ID (e.g. {@code gtceu:large_assembler}) is eligible for the structure injection.
+     * Empty whitelist = all machines; non-empty = only the listed IDs.
+     */
+    public static boolean isMachineInStructureCompatWhitelist(String machineId) {
+        Set<String> whitelist = structureCompatMachineWhitelist;
+        return whitelist.isEmpty() || whitelist.contains(machineId);
+    }
+
     /** Query pipe tolerance for a material name (lowercase); null if not configured. */
     @Nullable
     public static PressurePipeProperties getPressurePipeTolerance(String materialName) {
@@ -425,11 +452,29 @@ public final class GTUF_Config {
             threadHatchMinTier = THREAD_HATCH_MIN_TIER.get();
             threadHatchVanillaInjection = THREAD_HATCH_VANILLA_INJECT.get();
             energySavingHatchVanillaInjection = ENERGY_SAVING_HATCH_VANILLA_INJECT.get();
+            structureCompatMachineWhitelist = parseMachineWhitelist(STRUCTURE_COMPAT_MACHINE_WHITELIST.get());
             pressurePipeTolerances.clear();
             pressurePipeTolerances.putAll(parsePressurePipeTolerances(PRESSURE_PIPE_TOLERANCES_CONFIG.get()));
             glassTiers.clear();
             glassTiers.putAll(parseGlassTiers(GLASS_TIERS_CONFIG.get()));
         }
+    }
+
+    /**
+     * Parse "namespace:path" machine IDs into a lowercase set. Invalid entries are skipped and logged.
+     * Empty input → empty set = all machines allowed.
+     */
+    private static Set<String> parseMachineWhitelist(List<? extends String> entries) {
+        Set<String> parsed = new HashSet<>();
+        for (String entry : entries) {
+            String trimmed = entry.trim().toLowerCase(Locale.ROOT);
+            if (trimmed.indexOf(':') <= 0 || trimmed.endsWith(":") || trimmed.contains(" ")) {
+                LOGGER.warn("[GTUF] 结构注入机器白名单条目格式错误（应为 \"命名空间:路径\"），已跳过: {}", entry);
+                continue;
+            }
+            parsed.add(trimmed);
+        }
+        return parsed;
     }
 
     /** Parse "registryName=tier" entries into a map. Invalid entries are skipped and logged. */

@@ -7,9 +7,8 @@ import com.lowdragmc.lowdraglib.gui.widget.Widget;
 import com.lowdragmc.lowdraglib.utils.Position;
 import com.lowdragmc.lowdraglib.utils.Size;
 
-import mezz.jei.api.gui.inputs.RecipeSlotUnderMouse;
 import mezz.jei.api.gui.ingredient.IRecipeSlotDrawable;
-
+import mezz.jei.api.gui.inputs.RecipeSlotUnderMouse;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -95,8 +94,8 @@ public abstract class GTUF_MultiblockInfoSlotGuardMixin {
             }
             List<Widget> flatWidgets = recipe.modularUI.getFlatWidgetCollection();
             for (Object item : slots) {
-                if (item instanceof IRecipeSlotDrawable drawable
-                        && gtuf$isSlotUnderMouse(drawable, flatWidgets, mouseX, mouseY)) {
+                if (item instanceof IRecipeSlotDrawable drawable &&
+                        gtuf$isSlotUnderMouse(drawable, flatWidgets, mouseX, mouseY)) {
                     return Optional.of(new RecipeSlotUnderMouse(drawable, 0, 0));
                 }
             }

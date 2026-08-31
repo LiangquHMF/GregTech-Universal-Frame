@@ -202,9 +202,7 @@ public class GTUFThreadingLogic {
             // activeRecipes 非空（有线程在跑）时恒每 tick 搜索补位。
             boolean searchNow = !activeRecipes.isEmpty();
             if (!searchNow) {
-                searchNow = machine.keepSubscribing()
-                        ? metaMachine.getOffsetTimer() % IDLE_SEARCH_INTERVAL == 0
-                        : true;
+                searchNow = machine.keepSubscribing() ? metaMachine.getOffsetTimer() % IDLE_SEARCH_INTERVAL == 0 : true;
             }
             if (searchNow) {
                 // 基础搜索：一次收集，逐个尝试启动
@@ -217,9 +215,7 @@ public class GTUFThreadingLogic {
                 // 1tick 配方在阶段 1 完成 → 腾出空位 → 此处立即补新配方 → 无间隔。
                 // 循环直到：无空位、无新配方、或达到轮数上限（防无限循环）。
                 int rounds = 0;
-                while (completedThisTick > 0
-                        && activeRecipes.size() < getMaxThreads()
-                        && rounds < MAX_RECYCLE_ROUNDS) {
+                while (completedThisTick > 0 && activeRecipes.size() < getMaxThreads() && rounds < MAX_RECYCLE_ROUNDS) {
                     completedThisTick = 0;
                     for (GTRecipe candidate : collectPossibleRecipes(SEARCH_LIMIT)) {
                         if (activeRecipes.size() >= getMaxThreads()) break;

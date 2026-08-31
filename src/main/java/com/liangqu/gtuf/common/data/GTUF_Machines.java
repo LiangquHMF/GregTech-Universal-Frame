@@ -265,7 +265,8 @@ public class GTUF_Machines {
         for (int tier : tiers) {
             if (tier < minTier) {
                 throw new IllegalArgumentException(
-                        "线程仓仅支持 " + GTValues.VN[minTier] + "~MAX（tier " + minTier + "~" + GTValues.MAX + "），收到 " + tier);
+                        "线程仓仅支持 " + GTValues.VN[minTier] + "~MAX（tier " + minTier + "~" + GTValues.MAX + "），收到 " +
+                                tier);
             }
         }
         return GTMachineUtils.registerTieredMachines(

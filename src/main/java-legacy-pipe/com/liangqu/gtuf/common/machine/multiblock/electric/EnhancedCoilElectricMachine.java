@@ -1,15 +1,15 @@
 package com.liangqu.gtuf.common.machine.multiblock.electric;
 
+import com.gregtechceu.gtceu.api.GTValues;
 import com.gregtechceu.gtceu.api.machine.IMachineBlockEntity;
 import com.gregtechceu.gtceu.api.machine.MetaMachine;
 import com.gregtechceu.gtceu.api.machine.multiblock.CoilWorkableElectricMultiblockMachine;
 import com.gregtechceu.gtceu.api.machine.multiblock.WorkableElectricMultiblockMachine;
 import com.gregtechceu.gtceu.api.recipe.GTRecipe;
+import com.gregtechceu.gtceu.api.recipe.RecipeHelper;
 import com.gregtechceu.gtceu.api.recipe.content.ContentModifier;
 import com.gregtechceu.gtceu.api.recipe.modifier.ModifierFunction;
 import com.gregtechceu.gtceu.api.recipe.modifier.ParallelLogic;
-import com.gregtechceu.gtceu.api.GTValues;
-import com.gregtechceu.gtceu.api.recipe.RecipeHelper;
 import com.gregtechceu.gtceu.common.data.GTRecipeModifiers;
 
 import com.lowdragmc.lowdraglib.syncdata.annotation.DescSynced;
@@ -28,6 +28,13 @@ import java.util.List;
  * 配方修改器在注册时用 {@code .recipeModifier(EnhancedCoilElectricMachine::recipeModifier, true)}
  * 挂载：先按最大并行（含线圈额外并行）放大配方，乘能耗减免，乘线圈提速，最后按创建期选定的
  * 完美/非完美OC（{@link #perfectOC}）。四功能全关时退化为纯并行 + 过时钟。
+ * </p>
+ * <p>
+ * <b>版本分源（GTM ≤ 7.4）</b>：本文件位于 {@code src/main/java-legacy-pipe}，供 GTM 7.1.4~7.4.1
+ * 构建使用（7.1.4~7.4.1 共用）。7.1.4 的 {@link ModifierFunction} 无
+ * {@code cancel(Component)}/{@code getFailReason()} API，温度/电压门控失败只能返回
+ * {@link ModifierFunction#NULL}，控制器 GUI 显示笼统的「Recipe Modifier Fail」。
+ * GTM 7.5.x 见 {@code src/main/java75} 下的同名类（携带具体失败原因）。
  * </p>
  */
 public class EnhancedCoilElectricMachine extends CoilWorkableElectricMultiblockMachine {
@@ -177,6 +184,8 @@ public class EnhancedCoilElectricMachine extends CoilWorkableElectricMultiblockM
      * 包含温度/等级门控（镜像 {@link GTRecipeModifiers#ebfOverclock}）：对于带 {@code ebf_temp}
      * 字段的配方（如电力高炉），校验线圈温度和机器等级是否足够；不满足则返回
      * {@link ModifierFunction#NULL}（配方不启动）。不带 {@code ebf_temp} 的配方跳过此检查。
+     * <b>注意</b>：GTM 7.1.4~7.4.1 无 {@code ModifierFunction.cancel(Component)} API，
+     * 失败原因无法携带，GUI 显示笼统的「Recipe Modifier Fail」。
      * </p>
      */
     public static ModifierFunction recipeModifier(MetaMachine machine, GTRecipe recipe) {
@@ -184,8 +193,8 @@ public class EnhancedCoilElectricMachine extends CoilWorkableElectricMultiblockM
 
         // 温度/等级门控（镜像 GTRecipeModifiers.ebfOverclock，防止低线圈处理高温度配方）
         if (recipe.data.contains("ebf_temp")) {
-            int blastFurnaceTemperature = coilMachine.getCoilType().getCoilTemperature()
-                    + (100 * Math.max(0, coilMachine.getTier() - GTValues.MV));
+            int blastFurnaceTemperature = coilMachine.getCoilType().getCoilTemperature() +
+                    (100 * Math.max(0, coilMachine.getTier() - GTValues.MV));
             int recipeTemp = recipe.data.getInt("ebf_temp");
             if (recipeTemp > blastFurnaceTemperature) return ModifierFunction.NULL;
             if (RecipeHelper.getRecipeEUtTier(recipe) > coilMachine.getTier()) return ModifierFunction.NULL;
@@ -219,8 +228,8 @@ public class EnhancedCoilElectricMachine extends CoilWorkableElectricMultiblockM
     public void addDisplayText(List<Component> textList) {
         super.addDisplayText(textList);
         if (isFormed()) {
-            int blastFurnaceTemperature = getCoilType().getCoilTemperature()
-                    + (100 * Math.max(0, getTier() - GTValues.MV));
+            int blastFurnaceTemperature = getCoilType().getCoilTemperature() +
+                    (100 * Math.max(0, getTier() - GTValues.MV));
             textList.add(Component.translatable("gtuf.multiblock.coil_temperature",
                     blastFurnaceTemperature + "K")
                     .withStyle(ChatFormatting.GOLD));

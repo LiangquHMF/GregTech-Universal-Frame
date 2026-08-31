@@ -27,10 +27,10 @@ import java.util.List;
  * <b>按等级倍率</b>（新增，取值 <b>1 = 关闭</b>，与固定倍率的 0 = 关闭不同）：
  * <ul>
  * <li>额外能耗倍率 {@code tieredEnergy}：<1 省电。有效能耗倍率 = {@code tieredEnergy^(tier-1)}，
- *     LV(1)=1.0 恒不缩放，MV(2)=tieredEnergy，HV(3)=tieredEnergy²……电压等级越高越省电。</li>
+ * LV(1)=1.0 恒不缩放，MV(2)=tieredEnergy，HV(3)=tieredEnergy²……电压等级越高越省电。</li>
  * <li>额外加速倍率 {@code tieredSpeed}：>1 加速（<1 会变慢）。有效时长倍率 =
- *     {@code 1 / tieredSpeed^(tier-1)}，MV 起逐级加速。注意方向与固定时长倍率相反
- *     （固定倍率 0.5 = 提速一倍；按等级倍率 2.0 = 提速一倍）。</li>
+ * {@code 1 / tieredSpeed^(tier-1)}，MV 起逐级加速。注意方向与固定时长倍率相反
+ * （固定倍率 0.5 = 提速一倍；按等级倍率 2.0 = 提速一倍）。</li>
  * </ul>
  * 按等级倍率取 {@code <= 0} 时同样视为关闭（防御非法值，避免除零/负幂）。两者与固定倍率
  * 相乘叠加。默认双 1（关闭）→ 行为与历史版本一致（纯并行 + 完美过时钟）。
@@ -93,12 +93,12 @@ public class TierElectricParallelMachine extends WorkableElectricMultiblockMachi
      * 完整构造器：并行倍率 + 时长倍率 + 能耗倍率 + 按等级倍率全部在创建（构建多方块结构）时设定。
      * {@code .machine((holder) => new TierElectricParallelMachine(holder, 倍率, 时长倍率, 能耗倍率, 额外能耗倍率, 额外加速倍率))}。
      *
-     * @param parallelMultiplier      并行倍率（最大并行数 = 倍率 × 最大电压等级），下限 1
-     * @param durationMultiplier      固定时长倍率（≤0 = 关闭不改耗时；0.5 = 提速一倍）
-     * @param energyMultiplier        固定能耗倍率（≤0 = 关闭不改能耗；0.5 = 半能耗）
-     * @param tieredEnergyMultiplier  额外能耗倍率（1 = 关闭；<1 省电，有效倍率 = 本值^(电压等级-1)）
-     * @param tieredSpeedMultiplier   额外加速倍率（1 = 关闭；>1 加速，有效时长倍率 = 1/本值^(电压等级-1)）
-     * @param args                    透传给基类的额外参数（如配方类型）
+     * @param parallelMultiplier     并行倍率（最大并行数 = 倍率 × 最大电压等级），下限 1
+     * @param durationMultiplier     固定时长倍率（≤0 = 关闭不改耗时；0.5 = 提速一倍）
+     * @param energyMultiplier       固定能耗倍率（≤0 = 关闭不改能耗；0.5 = 半能耗）
+     * @param tieredEnergyMultiplier 额外能耗倍率（1 = 关闭；<1 省电，有效倍率 = 本值^(电压等级-1)）
+     * @param tieredSpeedMultiplier  额外加速倍率（1 = 关闭；>1 加速，有效时长倍率 = 1/本值^(电压等级-1)）
+     * @param args                   透传给基类的额外参数（如配方类型）
      */
     public TierElectricParallelMachine(IMachineBlockEntity holder, int parallelMultiplier,
                                        double durationMultiplier, double energyMultiplier,
@@ -173,9 +173,9 @@ public class TierElectricParallelMachine extends WorkableElectricMultiblockMachi
 
     /** 固定或按等级倍率是否任一启用（决定并行放大后是否还需叠倍率）。 */
     private boolean hasMultipliers() {
-        return durationMultiplier > 0 || energyMultiplier > 0
-                || (tieredEnergyMultiplier != 1.0 && tieredEnergyMultiplier > 0)
-                || (tieredSpeedMultiplier != 1.0 && tieredSpeedMultiplier > 0);
+        return durationMultiplier > 0 || energyMultiplier > 0 ||
+                (tieredEnergyMultiplier != 1.0 && tieredEnergyMultiplier > 0) ||
+                (tieredSpeedMultiplier != 1.0 && tieredSpeedMultiplier > 0);
     }
 
     /**
@@ -195,11 +195,11 @@ public class TierElectricParallelMachine extends WorkableElectricMultiblockMachi
                 ModifierFunction.builder()
                         .modifyAllContents(ContentModifier.multiplier(parallels))
                         // 能耗倍率乘进 eutMultiplier（并行份数 × 固定倍率 × 按等级倍率）
-                        .eutMultiplier(parallels * parallelMachine.getEnergyMultiplier()
-                                * parallelMachine.getTieredEnergyMultiplier())
+                        .eutMultiplier(parallels * parallelMachine.getEnergyMultiplier() *
+                                parallelMachine.getTieredEnergyMultiplier())
                         // 时长倍率单独乘（固定倍率 × 按等级倍率折算的时长倍率）
-                        .durationMultiplier(parallelMachine.getDurationMultiplier()
-                                * parallelMachine.getTieredDurationMultiplier())
+                        .durationMultiplier(
+                                parallelMachine.getDurationMultiplier() * parallelMachine.getTieredDurationMultiplier())
                         .parallels(parallels)
                         .build();
 
